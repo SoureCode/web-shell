@@ -5,4 +5,4 @@ export const TERMINAL_FONT_FAMILY =
 
 export const TERMINAL_FONT_SIZE = 13;
 
-export const TERMINAL_SCROLLBACK = 5000;
+export const TERMINAL_SCROLLBACK = 10000;
