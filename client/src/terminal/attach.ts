@@ -5,13 +5,14 @@ import { log } from "../utils/log.js";
 import { createTerminal } from "./factory.js";
 import { parseServerMessage } from "./protocol.js";
 import { observeResize } from "./resize.js";
+import { mountSearch } from "./search.js";
 
 export function attachTerminal(
   container: HTMLElement,
   sessionId: string,
   onStatus: StatusListener,
 ): AttachedTerminal {
-  const { term, fit } = createTerminal(container);
+  const { term, fit, search } = createTerminal(container);
   const socket = openSessionSocket(sessionId);
   let opened = false;
 
@@ -58,12 +59,14 @@ export function attachTerminal(
   const inputSub = term.onData((data) => send({ type: "input", data }));
   const resizeSub = term.onResize(sendResize);
   const stopObserve = observeResize(container, term, fit);
+  const stopSearch = mountSearch(container, term, search);
 
   return {
     sessionId,
     fit: () => fit.fit(),
     dispose: () => {
       log("attach", "dispose", sessionId);
+      stopSearch();
       stopObserve();
       inputSub.dispose();
       resizeSub.dispose();
