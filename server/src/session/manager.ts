@@ -3,9 +3,33 @@ import type { CreateSessionRequest, SessionInfo } from "../types/session.js";
 import { log } from "../utils/log.js";
 import { defaultCwd, defaultShell } from "../utils/shell.js";
 import { Session } from "./session.js";
+import * as tmux from "./tmux.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, Session>();
+
+  async rehydrate(): Promise<void> {
+    const existing = await tmux.listSessions();
+    for (const t of existing) {
+      const initialHistory = await tmux.capturePane(t.name);
+      const session = new Session({
+        id: t.id,
+        createdAt: t.createdAt,
+        title: t.title,
+        shell: defaultShell(),
+        cwd: defaultCwd(),
+        cols: DEFAULT_COLS,
+        rows: DEFAULT_ROWS,
+        initialHistory,
+      });
+      this.sessions.set(session.id, session);
+      log("session", "rehydrate", session.id, session.title);
+      session.onExit((code, signal) => {
+        log("session", "removed after exit", session.id, "code=", code, "signal=", signal);
+        this.sessions.delete(session.id);
+      });
+    }
+  }
 
   create(req: CreateSessionRequest): Session {
     const session = new Session({

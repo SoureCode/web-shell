@@ -12,6 +12,7 @@ import { mountWsRouter } from "./ws/router.js";
 process.env["PORT"] = String(PORT);
 
 const manager = new SessionManager();
+await manager.rehydrate();
 const server = http.createServer();
 mountWsRouter(server, manager);
 

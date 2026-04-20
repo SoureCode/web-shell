@@ -3,21 +3,25 @@ import { randomUUID } from "node:crypto";
 import { SCROLLBACK_BYTES } from "../config.js";
 import type { SessionInfo } from "../types/session.js";
 import { Scrollback } from "./scrollback.js";
+import * as tmux from "./tmux.js";
 
 export type OutputListener = (chunk: string) => void;
 export type ExitListener = (code: number, signal?: number) => void;
 
 export interface SessionOptions {
+  readonly id?: string;
+  readonly createdAt?: number;
   readonly title: string;
   readonly shell: string;
   readonly cwd: string;
   readonly cols: number;
   readonly rows: number;
+  readonly initialHistory?: string;
 }
 
 export class Session {
-  readonly id: string = randomUUID();
-  readonly createdAt: number = Date.now();
+  readonly id: string;
+  readonly createdAt: number;
   readonly shell: string;
 
   private _title: string;
@@ -27,20 +31,40 @@ export class Session {
   private readonly scrollback = new Scrollback(SCROLLBACK_BYTES);
   private readonly outputListeners = new Set<OutputListener>();
   private readonly exitListeners = new Set<ExitListener>();
+  private readonly tmuxName: string;
 
   constructor(opts: SessionOptions) {
+    this.id = opts.id ?? randomUUID();
+    this.createdAt = opts.createdAt ?? Date.now();
     this._title = opts.title;
     this.shell = opts.shell;
     this._cols = opts.cols;
     this._rows = opts.rows;
+    this.tmuxName = tmux.sessionName(this.id);
 
-    this.pty = spawn(opts.shell, [], {
-      name: "xterm-256color",
-      cols: opts.cols,
-      rows: opts.rows,
-      cwd: opts.cwd,
-      env: process.env as Record<string, string>,
-    });
+    if (opts.initialHistory) this.scrollback.append(opts.initialHistory);
+
+    this.pty = spawn(
+      "tmux",
+      [
+        "new-session",
+        "-A",
+        "-s",
+        this.tmuxName,
+        "-x",
+        String(opts.cols),
+        "-y",
+        String(opts.rows),
+        opts.shell,
+      ],
+      {
+        name: "xterm-256color",
+        cols: opts.cols,
+        rows: opts.rows,
+        cwd: opts.cwd,
+        env: process.env as Record<string, string>,
+      },
+    );
 
     this.pty.onData((data) => {
       this.scrollback.append(data);
@@ -50,6 +74,14 @@ export class Session {
     this.pty.onExit(({ exitCode, signal }) => {
       for (const listener of this.exitListeners) listener(exitCode, signal);
     });
+
+    void this.configureTmux();
+  }
+
+  private async configureTmux(): Promise<void> {
+    await tmux.setOption(this.tmuxName, "status", "off");
+    await tmux.setOption(this.tmuxName, "history-limit", "10000");
+    await tmux.setTitle(this.tmuxName, this._title);
   }
 
   get title(): string {
@@ -58,6 +90,7 @@ export class Session {
 
   setTitle(title: string): void {
     this._title = title;
+    void tmux.setTitle(this.tmuxName, title);
   }
 
   get cols(): number {
@@ -106,6 +139,7 @@ export class Session {
     } catch {
       // already dead
     }
+    void tmux.kill(this.tmuxName);
   }
 
   info(): SessionInfo {
