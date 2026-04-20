@@ -1,7 +1,7 @@
 import "./styles/main.scss";
 import "@xterm/xterm/css/xterm.css";
 
-import { createSession, destroySession, listSessions } from "./api/sessions.js";
+import { UnauthorizedError, createSession, destroySession, listSessions } from "./api/sessions.js";
 import {
   clearActiveSessionId,
   getActiveSessionId,
@@ -10,6 +10,7 @@ import {
 import { attachTerminal } from "./terminal/attach.js";
 import type { SessionInfo } from "./types/session.js";
 import type { AttachedTerminal } from "./types/terminal.js";
+import { promptForToken } from "./ui/auth-prompt.js";
 import { renderSessionList } from "./ui/sidebar.js";
 import { createStatusBar } from "./ui/status.js";
 import { requireElement } from "./utils/dom.js";
@@ -59,8 +60,20 @@ async function createAndAttach(): Promise<void> {
 
 newBtn.addEventListener("click", () => void createAndAttach());
 
+async function withAuthRetry<T>(op: () => Promise<T>): Promise<T> {
+  for (;;) {
+    try {
+      return await op();
+    } catch (err: unknown) {
+      if (!(err instanceof UnauthorizedError)) throw err;
+      setStatus("authentication required");
+      if (!promptForToken("web-shell auth token")) throw err;
+    }
+  }
+}
+
 async function bootstrap(): Promise<void> {
-  const sessions = await refresh();
+  const sessions = await withAuthRetry(refresh);
   const saved = getActiveSessionId();
   const target = sessions.find((s) => s.id === saved) ?? sessions[0];
   if (target) await attach(target.id);

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { SessionManager } from "../session/manager.js";
 import type { CreateSessionRequest } from "../types/session.js";
+import { extractBearer, isTokenValid } from "../utils/auth.js";
 import { applyCors } from "../utils/cors.js";
 import { readJson, sendJson } from "../utils/json.js";
 import { isOriginAllowed } from "../utils/origin.js";
@@ -21,6 +22,11 @@ export function createHttpHandler(manager: SessionManager) {
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    if (!isTokenValid(extractBearer(req))) {
+      sendJson(res, 401, { error: "unauthorized" });
       return;
     }
 

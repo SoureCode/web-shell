@@ -90,6 +90,17 @@ The active session id is stored in `localStorage` so reloads reopen the same ses
 
 | Variable          | Default                                                 | Description                                                                                    |
 | ----------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `HOST`            | `127.0.0.1`                                             | Bind address. Loopback by default so an unfronted instance is never silently network-reachable. Set to `0.0.0.0` only when the port is protected by a reverse proxy / tunnel. |
 | `PORT`            | `4000`                                                  | Server HTTP/WS port                                                                            |
 | `SHELL`           | env / `bash`                                            | Default shell for new sessions                                                                 |
 | `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173`           | Comma-separated origin allow-list. Requests with a disallowed `Origin` are rejected (HTTP 403 / WS 403). Required for the frontend you actually deploy. |
+| `AUTH_TOKEN`      | _unset_                                                 | Optional shared bearer token. When set, REST requires `Authorization: Bearer <token>` and WS requires `?token=<token>`. When unset, auth is disabled — only safe behind an authenticated upstream (Coder agent, SSO proxy, Tailscale, etc.). |
+
+## Security model
+
+web-shell has no user/account model. It exposes two trust modes:
+
+1. **Token mode** (`AUTH_TOKEN` set). A single shared bearer token gates REST and WS. The browser prompts once and caches the token in `localStorage`. Suitable for solo/personal deployments.
+2. **Proxy mode** (`AUTH_TOKEN` unset). The app trusts whatever sits in front of it — a reverse proxy with SSO, the Coder workspace agent tunnel, a VPN, etc. **Never expose a proxy-mode instance directly to an untrusted network.** The default `HOST=127.0.0.1` bind helps prevent accidental exposure.
+
+Regardless of mode, cross-origin requests are rejected unless the `Origin` matches `ALLOWED_ORIGINS`, closing CSWSH and drive-by session-creation paths.

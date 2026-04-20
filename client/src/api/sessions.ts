@@ -1,15 +1,34 @@
+import { getAuthToken } from "../state/auth-token.js";
 import type { CreateSessionInput, SessionInfo } from "../types/session.js";
+import { apiUrl } from "../utils/url.js";
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("unauthorized");
+  }
+}
+
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { ...extra, authorization: `Bearer ${token}` } : extra;
+}
+
+async function request(path: string, init: RequestInit = {}): Promise<Response> {
+  const res = await fetch(apiUrl(path), init);
+  if (res.status === 401) throw new UnauthorizedError();
+  return res;
+}
 
 export async function listSessions(): Promise<SessionInfo[]> {
-  const res = await fetch("/api/sessions");
+  const res = await request("api/sessions", { headers: authHeaders() });
   if (!res.ok) throw new Error(`list failed: ${res.status}`);
   return (await res.json()) as SessionInfo[];
 }
 
 export async function createSession(input: CreateSessionInput = {}): Promise<SessionInfo> {
-  const res = await fetch("/api/sessions", {
+  const res = await request("api/sessions", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: authHeaders({ "content-type": "application/json" }),
     body: JSON.stringify(input),
   });
   if (!res.ok) throw new Error(`create failed: ${res.status}`);
@@ -17,6 +36,9 @@ export async function createSession(input: CreateSessionInput = {}): Promise<Ses
 }
 
 export async function destroySession(id: string): Promise<void> {
-  const res = await fetch(`/api/sessions/${id}`, { method: "DELETE" });
+  const res = await request(`api/sessions/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
   if (!res.ok && res.status !== 404) throw new Error(`destroy failed: ${res.status}`);
 }

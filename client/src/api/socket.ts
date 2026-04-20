@@ -1,4 +1,8 @@
+import { getAuthToken } from "../state/auth-token.js";
+import { wsUrl } from "../utils/url.js";
+
 export function openSessionSocket(id: string): WebSocket {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  return new WebSocket(`${proto}://${location.host}/ws/sessions/${id}`);
+  const token = getAuthToken();
+  const qs = token ? `?token=${encodeURIComponent(token)}` : "";
+  return new WebSocket(`${wsUrl(`ws/sessions/${id}`)}${qs}`);
 }

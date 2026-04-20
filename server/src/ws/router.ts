@@ -2,6 +2,7 @@ import type { IncomingMessage, Server as HttpServer } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer } from "ws";
 import type { SessionManager } from "../session/manager.js";
+import { extractQueryToken, isTokenValid } from "../utils/auth.js";
 import { isOriginAllowed } from "../utils/origin.js";
 import { bindSocket } from "./connection.js";
 
@@ -22,6 +23,12 @@ export function mountWsRouter(server: HttpServer, manager: SessionManager): void
     }
 
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+
+    if (!isTokenValid(extractQueryToken(url))) {
+      rejectUpgrade(socket, 401, "Unauthorized");
+      return;
+    }
+
     const match = WS_PATH.exec(url.pathname);
     if (!match) {
       rejectUpgrade(socket, 404, "Not Found");

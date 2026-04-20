@@ -1,4 +1,7 @@
+export const HOST: string = process.env["HOST"] ?? "127.0.0.1";
 export const PORT: number = Number(process.env["PORT"] ?? 4000);
+
+export const AUTH_TOKEN: string | null = process.env["AUTH_TOKEN"]?.trim() || null;
 
 export const SCROLLBACK_BYTES = 256 * 1024;
 
