@@ -24,7 +24,8 @@ function reinstateBase(base: string): Plugin {
 }
 
 export default defineConfig(() => {
-  const base = parsed ? `${parsed.pathname}/` : "/";
+  const pathname = parsed?.pathname ?? "/";
+  const base = !parsed || pathname === "/" ? "/" : `${pathname.replace(/\/$/, "")}/`;
   return {
     base,
     plugins: [reinstateBase(base)],
