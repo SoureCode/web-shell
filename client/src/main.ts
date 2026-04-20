@@ -1,7 +1,8 @@
 import "./styles/main.scss";
 import "@xterm/xterm/css/xterm.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
-import { UnauthorizedError, createSession, destroySession, listSessions } from "./api/sessions.js";
+import { UnauthorizedError, createSession, destroySession, listSessions, renameSession } from "./api/sessions.js";
 import { log } from "./utils/log.js";
 import {
   clearActiveSessionId,
@@ -12,15 +13,21 @@ import { attachTerminal } from "./terminal/attach.js";
 import type { SessionInfo } from "./types/session.js";
 import type { AttachedTerminal } from "./types/terminal.js";
 import { promptForToken } from "./ui/auth-prompt.js";
+import { mountDrawer } from "./ui/drawer.js";
 import { renderSessionList } from "./ui/sidebar.js";
 import { createStatusBar } from "./ui/status.js";
 import { requireElement } from "./utils/dom.js";
 
+const appEl = requireElement<HTMLDivElement>("app");
 const sessionListEl = requireElement<HTMLUListElement>("session-list");
 const newBtn = requireElement<HTMLButtonElement>("new-session");
 const termEl = requireElement<HTMLDivElement>("terminal");
 const statusEl = requireElement<HTMLDivElement>("status");
+const menuToggle = requireElement<HTMLButtonElement>("menu-toggle");
+const backdrop = requireElement<HTMLDivElement>("backdrop");
+const pinBtn = requireElement<HTMLButtonElement>("pin-sidebar");
 
+const drawer = mountDrawer({ root: appEl, toggleBtn: menuToggle, backdrop, pinBtn });
 const setStatus = createStatusBar(statusEl);
 
 let active: AttachedTerminal | null = null;
@@ -28,7 +35,14 @@ let active: AttachedTerminal | null = null;
 async function refresh(): Promise<SessionInfo[]> {
   const sessions = await listSessions();
   renderSessionList(sessionListEl, sessions, active?.sessionId ?? null, {
-    onSelect: (id) => void attach(id),
+    onSelect: (id) => {
+      drawer.closeIfMobile();
+      void attach(id);
+    },
+    onRename: async (id, title) => {
+      await renameSession(id, title);
+      await refresh();
+    },
     onDestroy: (id) => void destroy(id),
   });
   return sessions;
@@ -63,6 +77,7 @@ async function destroy(id: string): Promise<void> {
 
 async function createAndAttach(): Promise<void> {
   const info = await createSession();
+  drawer.closeIfMobile();
   await attach(info.id);
 }
 

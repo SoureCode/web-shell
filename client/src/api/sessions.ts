@@ -46,3 +46,13 @@ export async function destroySession(id: string): Promise<void> {
   });
   if (!res.ok && res.status !== 404) throw new Error(`destroy failed: ${res.status}`);
 }
+
+export async function renameSession(id: string, title: string): Promise<SessionInfo> {
+  const res = await request(`api/sessions/${id}`, {
+    method: "PATCH",
+    headers: authHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error(`rename failed: ${res.status}`);
+  return (await res.json()) as SessionInfo;
+}

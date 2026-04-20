@@ -2,19 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>web-shell</title>
   </head>
   <body>
     <div id="app">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
         <header class="sidebar__header">
           <h1>web-shell</h1>
-          <button id="new-session" type="button">+ new</button>
+          <div class="sidebar__actions">
+            <button id="pin-sidebar" class="sidebar__pin" type="button" aria-pressed="false" title="pin sidebar" aria-label="pin sidebar">
+              <i class="bi bi-pin-angle" aria-hidden="true"></i>
+            </button>
+            <button id="new-session" type="button" title="new session" aria-label="new session">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </div>
         </header>
         <ul id="session-list" class="session-list"></ul>
       </aside>
+      <div id="backdrop" class="backdrop" aria-hidden="true"></div>
       <main class="terminal-host">
+        <header class="terminal-host__header">
+          <button id="menu-toggle" class="menu-toggle" type="button" aria-label="toggle sidebar">
+            <span></span><span></span><span></span>
+          </button>
+        </header>
         <div id="terminal" class="terminal"></div>
         <div id="status" class="status">no session</div>
       </main>

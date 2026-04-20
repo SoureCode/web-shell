@@ -18,9 +18,9 @@ export interface SessionOptions {
 export class Session {
   readonly id: string = randomUUID();
   readonly createdAt: number = Date.now();
-  readonly title: string;
   readonly shell: string;
 
+  private _title: string;
   private _cols: number;
   private _rows: number;
   private readonly pty: IPty;
@@ -29,7 +29,7 @@ export class Session {
   private readonly exitListeners = new Set<ExitListener>();
 
   constructor(opts: SessionOptions) {
-    this.title = opts.title;
+    this._title = opts.title;
     this.shell = opts.shell;
     this._cols = opts.cols;
     this._rows = opts.rows;
@@ -50,6 +50,14 @@ export class Session {
     this.pty.onExit(({ exitCode, signal }) => {
       for (const listener of this.exitListeners) listener(exitCode, signal);
     });
+  }
+
+  get title(): string {
+    return this._title;
+  }
+
+  setTitle(title: string): void {
+    this._title = title;
   }
 
   get cols(): number {
@@ -103,7 +111,7 @@ export class Session {
   info(): SessionInfo {
     return {
       id: this.id,
-      title: this.title,
+      title: this._title,
       shell: this.shell,
       cols: this._cols,
       rows: this._rows,

@@ -69,17 +69,70 @@
     font-family: inherit;
   }
 
-  &__close {
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-right: 0.35rem;
+  }
+
+  &__action {
+    width: 2.25rem;
+    height: 2.25rem;
     background: transparent;
-    border: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
     color: var(--fg-dim);
     cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    font-size: 1rem;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
 
     &:hover {
-      color: var(--danger);
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.05);
     }
+
+    &--danger:hover {
+      color: white;
+      background: var(--danger);
+    }
+  }
+
+  &__destroy {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    // Confirm (check/cross) shown only when armed; trash hidden when armed.
+    > .session-list__action:nth-child(2),
+    > .session-list__action:nth-child(3) {
+      display: none;
+    }
+
+    &[data-armed="true"] {
+      > .session-list__action:nth-child(1) {
+        display: none;
+      }
+
+      > .session-list__action:nth-child(2),
+      > .session-list__action:nth-child(3) {
+        display: inline-flex;
+      }
+    }
+  }
+
+  &__edit {
+    flex: 1;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 0.45rem 0.55rem;
+    margin: 0.05rem 0;
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
   }
 }

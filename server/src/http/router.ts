@@ -104,6 +104,21 @@ export function createHttpHandler(manager: SessionManager, fallback: RequestFall
         sendJson(res, ok ? 200 : 404, { ok });
         return;
       }
+      if (req.method === "PATCH") {
+        const session = manager.get(id);
+        if (!session) {
+          sendJson(res, 404, { error: "not found" });
+          return;
+        }
+        const body = await readJson<{ title?: string }>(req).catch(() => ({}) as { title?: string });
+        if (typeof body.title !== "string" || !body.title.trim()) {
+          sendJson(res, 400, { error: "title required" });
+          return;
+        }
+        session.setTitle(body.title.trim());
+        sendJson(res, 200, session.info());
+        return;
+      }
     }
 
     if (isApi) {

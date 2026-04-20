@@ -39,6 +39,7 @@ export function attachTerminal(
       return;
     }
     if (msg.type === "history" || msg.type === "output") {
+      log("attach", "recv", sessionId, msg.type, msg.data.length, "bytes");
       term.write(msg.data);
     } else {
       log("attach", "recv exit", sessionId, "code=", msg.code);

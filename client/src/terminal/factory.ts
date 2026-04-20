@@ -1,14 +1,12 @@
 import { Terminal } from "@xterm/xterm";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
-import { LigaturesAddon } from "@xterm/addon-ligatures";
 import { ProgressAddon } from "@xterm/addon-progress";
 import { SearchAddon } from "@xterm/addon-search";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { TERMINAL_FONT_FAMILY, TERMINAL_FONT_SIZE, TERMINAL_SCROLLBACK } from "../config.js";
-import { log } from "../utils/log.js";
+import { tryEnableGpuRenderer } from "./gpu.js";
 
 export interface TerminalBundle {
   readonly term: Terminal;
@@ -46,20 +44,11 @@ export function createTerminal(container: HTMLElement): TerminalBundle {
   term.unicode.activeVersion = "15-graphemes";
 
   term.open(container);
-
-  try {
-    const webgl = new WebglAddon();
-    webgl.onContextLoss(() => {
-      log("terminal", "webgl context lost, disposing addon");
-      webgl.dispose();
-    });
-    term.loadAddon(webgl);
-    term.loadAddon(new LigaturesAddon());
-  } catch (err: unknown) {
-    log("terminal", "webgl unavailable, using DOM renderer", String(err));
-  }
-
   fit.fit();
+
+  requestAnimationFrame(() => {
+    tryEnableGpuRenderer(term, fit);
+  });
 
   return { term, fit, search };
 }
