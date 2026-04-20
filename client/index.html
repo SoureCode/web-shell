@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>web-shell</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside class="sidebar">
+        <header class="sidebar__header">
+          <h1>web-shell</h1>
+          <button id="new-session" type="button">+ new</button>
+        </header>
+        <ul id="session-list" class="session-list"></ul>
+      </aside>
+      <main class="terminal-host">
+        <div id="terminal" class="terminal"></div>
+        <div id="status" class="status">no session</div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

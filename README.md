@@ -1,55 +1,94 @@
-# SoureCode Devcontainer Template
+# web-shell
 
-Opinionated devcontainer preloaded with the
-[`sourecode/devcontainer-features`](https://github.com/sourecode/devcontainer-features)
-collection. Open this folder in any editor that speaks the
-[Dev Containers spec](https://containers.dev) (VS Code, JetBrains Gateway,
-`devcontainer` CLI, Coder, …) and you get a Debian `trixie-slim` box with
-Node.js, Claude Code, and home-directory persistence wired up.
+Persistent browser terminal. Spawns PTY sessions on a Node.js backend and streams them over WebSocket to [xterm.js](https://xtermjs.org/). Sessions live server-side with a scrollback buffer, so refreshing the page — or reattaching from another device — resumes the same shell exactly where you left it.
 
-## What's inside
+## Stack
 
-| Feature | Summary |
-|---|---|
-| [`nvm`](https://github.com/sourecode/devcontainer-features/tree/master/src/nvm) | System-wide nvm at `/usr/local/share/nvm` with `node`/`npm`/`npx` on PATH (defaults to the LTS). |
-| [`claude-code`](https://github.com/sourecode/devcontainer-features/tree/master/src/claude-code) | Latest Claude Code CLI via the official native installer. Declares `~/.claude` and `~/.claude.json` as persistence targets and pulls in `nvm` via `dependsOn`. |
-| [`rtk`](https://github.com/sourecode/devcontainer-features/tree/master/src/rtk) | [rtk](https://github.com/rtk-ai/rtk) LLM token-reducing proxy. Auto-patches Claude Code so the hook is written against the live `~/.claude`. |
-| [`context-mode`](https://github.com/sourecode/devcontainer-features/tree/master/src/context-mode) | Installs the [`context-mode`](https://github.com/mksglu/context-mode) Claude Code plugin into `~/.claude/plugins`. |
-| [`home-persist`](https://github.com/sourecode/devcontainer-features/tree/master/src/home-persist) | Symlinks declared `$HOME` paths into the per-owner persistence volume at `/mnt/home-persist`. |
+- **Server**: Node.js + TypeScript, `node-pty`, `ws`
+- **Client**: TypeScript + SCSS + Vite, `xterm.js`
+- Strict TS everywhere (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, …)
 
-## Usage
+## Layout
 
-1. Click **Use this template** on GitHub to create your own repo.
-2. Ensure a persistence directory exists on the host and is bind-mounted at
-   `/mnt/home-persist` — the included `devcontainer.json` declares the mount,
-   and the host path must be writable by the container user (UID `1000` by
-   default).
-3. Open the repo in your Dev Containers client and let the features install.
-   On first create, `home-persist` materializes symlinks for `~/.claude`,
-   `~/.claude.json`, and anything else features or you declare.
+```
+server/src/
+  types/       session & protocol shapes
+  session/     Session, SessionManager, scrollback
+  http/        REST router
+  ws/          upgrade handler, per-socket wiring, parser
+  utils/       cors, json, shell helpers
+  config.ts
+  index.ts
 
-### Customizing the user
-
-The Dockerfile accepts `USERNAME`, `USER_UID`, and `USER_GID` build args,
-driven by `DEVCONTAINER_USERNAME` / `DEVCONTAINER_USER_UID` /
-`DEVCONTAINER_USER_GID` from the host environment. Defaults: `dev` / `1000` /
-`1000`.
-
-### Adding your own persisted paths
-
-Set the `paths` option on `home-persist` in `devcontainer.json`:
-
-```jsonc
-"ghcr.io/sourecode/devcontainer-features/home-persist:1": {
-  "paths": ".gitconfig,.ssh,.config/gh"
-}
+client/src/
+  types/       protocol, session, terminal shapes
+  api/         REST client, socket factory
+  terminal/    xterm factory, attach, resize, parser
+  ui/          sidebar, status
+  state/       localStorage persistence
+  utils/       dom, json
+  styles/      SCSS partials
+  config.ts
+  main.ts
 ```
 
-Features already declare their own paths (e.g. `claude-code` contributes
-`.claude` and `.claude.json`), so you only list what's yours.
+One concept per file. Types under `types/`, helpers under `utils/`.
 
-## References
+## Develop
 
-- Upstream features & docs: https://github.com/sourecode/devcontainer-features
-- Persistence model: [`docs/persistence.md`](https://github.com/sourecode/devcontainer-features/blob/master/docs/persistence.md)
-- Dev Containers spec: https://containers.dev
+```bash
+npm install
+npm run dev
+```
+
+- Server: `http://localhost:4000`
+- Client: `http://localhost:5173` (proxies `/api` and `/ws` to the server)
+
+## Build
+
+```bash
+npm run build
+npm start
+```
+
+`npm run build` compiles the server to `server/dist/` and bundles the client to `client/dist/`. `npm start` runs the compiled server.
+
+## API
+
+| Method | Path                    | Description                    |
+| ------ | ----------------------- | ------------------------------ |
+| GET    | `/api/sessions`         | list sessions                  |
+| POST   | `/api/sessions`         | create session                 |
+| GET    | `/api/sessions/:id`     | session info                   |
+| DELETE | `/api/sessions/:id`     | destroy session                |
+| WS     | `/ws/sessions/:id`      | attach: history + I/O + resize |
+
+### WebSocket protocol
+
+Client → server:
+
+```ts
+{ type: "input",  data: string }
+{ type: "resize", cols: number, rows: number }
+```
+
+Server → client:
+
+```ts
+{ type: "history", data: string }              // scrollback replay on connect
+{ type: "output",  data: string }              // live PTY output
+{ type: "exit",    code: number, signal?: number }
+```
+
+## Persistence model
+
+`SessionManager` owns the live `Session` instances. Each session keeps the last 256 KB of PTY output in a ring buffer. New WebSocket connections receive a `history` frame with the current buffer before live `output` streams, so the terminal repaints to the current state on refresh.
+
+The active session id is stored in `localStorage` so reloads reopen the same session automatically.
+
+## Config
+
+| Variable | Default | Description         |
+| -------- | ------- | ------------------- |
+| `PORT`   | `4000`  | Server HTTP/WS port |
+| `SHELL`  | env / `bash` | Default shell for new sessions |
