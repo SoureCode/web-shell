@@ -88,7 +88,8 @@ The active session id is stored in `localStorage` so reloads reopen the same ses
 
 ## Config
 
-| Variable | Default | Description         |
-| -------- | ------- | ------------------- |
-| `PORT`   | `4000`  | Server HTTP/WS port |
-| `SHELL`  | env / `bash` | Default shell for new sessions |
+| Variable          | Default                                                 | Description                                                                                    |
+| ----------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `PORT`            | `4000`                                                  | Server HTTP/WS port                                                                            |
+| `SHELL`           | env / `bash`                                            | Default shell for new sessions                                                                 |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173`           | Comma-separated origin allow-list. Requests with a disallowed `Origin` are rejected (HTTP 403 / WS 403). Required for the frontend you actually deploy. |

@@ -3,12 +3,20 @@ import type { SessionManager } from "../session/manager.js";
 import type { CreateSessionRequest } from "../types/session.js";
 import { applyCors } from "../utils/cors.js";
 import { readJson, sendJson } from "../utils/json.js";
+import { isOriginAllowed } from "../utils/origin.js";
 
 const SESSION_PATH = /^\/api\/sessions\/([^/]+)$/;
 
 export function createHttpHandler(manager: SessionManager) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    applyCors(res);
+    const origin = req.headers.origin;
+
+    if (origin !== undefined && !isOriginAllowed(origin)) {
+      sendJson(res, 403, { error: "origin not allowed" });
+      return;
+    }
+
+    applyCors(res, origin);
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);
