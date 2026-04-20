@@ -1,17 +1,22 @@
 #app {
   display: grid;
   grid-template-columns: 240px 1fr;
+  grid-template-rows: minmax(0, 1fr);
   height: 100vh;
+  overflow: hidden;
 }
 
 .terminal-host {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .terminal {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
   padding: 0.5rem;
+  overflow: hidden;
 }

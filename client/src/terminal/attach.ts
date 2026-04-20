@@ -38,7 +38,7 @@ export function attachTerminal(
 
   const inputSub = term.onData((data) => send({ type: "input", data }));
   const resizeSub = term.onResize(sendResize);
-  const stopObserve = observeResize(container, fit);
+  const stopObserve = observeResize(container, term, fit);
 
   return {
     sessionId,
