@@ -4,13 +4,17 @@ import type { RequestFallback } from "../types/fallback.js";
 import type { CreateSessionRequest } from "../types/session.js";
 import { extractBearer, isTokenValid } from "../utils/auth.js";
 import { readJson, sendJson } from "../utils/json.js";
+import { log } from "../utils/log.js";
 import { isRequestOriginAcceptable } from "../utils/origin.js";
 
 const SESSION_PATH = /^\/api\/sessions\/([^/]+)$/;
 
 export function createHttpHandler(manager: SessionManager, fallback: RequestFallback | null) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    log("http", req.method, req.url, "origin=", req.headers.origin ?? "-");
+
     if (!isRequestOriginAcceptable(req)) {
+      log("http", "rejected: origin", req.headers.origin);
       sendJson(res, 403, { error: "origin not allowed" });
       return;
     }
@@ -20,6 +24,7 @@ export function createHttpHandler(manager: SessionManager, fallback: RequestFall
     const isApi = path.startsWith("/api/");
 
     if (isApi && !isTokenValid(extractBearer(req))) {
+      log("http", "rejected: unauthorized", path);
       sendJson(res, 401, { error: "unauthorized" });
       return;
     }

@@ -8,7 +8,7 @@ export async function startViteDev(root: string, httpServer: HttpServer): Promis
     appType: "spa",
     server: {
       middlewareMode: true,
-      hmr: { server: httpServer },
+      hmr: { server: httpServer, path: "/__vite_hmr" },
       allowedHosts: true,
     },
   });

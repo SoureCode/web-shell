@@ -2,6 +2,7 @@ import "./styles/main.scss";
 import "@xterm/xterm/css/xterm.css";
 
 import { UnauthorizedError, createSession, destroySession, listSessions } from "./api/sessions.js";
+import { log } from "./utils/log.js";
 import {
   clearActiveSessionId,
   getActiveSessionId,
@@ -34,8 +35,15 @@ async function refresh(): Promise<SessionInfo[]> {
 }
 
 async function attach(id: string): Promise<void> {
-  if (active?.sessionId === id) return;
-  active?.dispose();
+  log("main", "attach request", id, "current=", active?.sessionId);
+  if (active?.sessionId === id) {
+    log("main", "attach skip (already active)", id);
+    return;
+  }
+  if (active) {
+    log("main", "disposing previous", active.sessionId);
+    active.dispose();
+  }
   active = attachTerminal(termEl, id, setStatus);
   setActiveSessionId(id);
   await refresh();

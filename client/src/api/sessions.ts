@@ -1,5 +1,6 @@
 import { getAuthToken } from "../state/auth-token.js";
 import type { CreateSessionInput, SessionInfo } from "../types/session.js";
+import { log } from "../utils/log.js";
 import { apiUrl } from "../utils/url.js";
 
 export class UnauthorizedError extends Error {
@@ -14,7 +15,10 @@ function authHeaders(extra: Record<string, string> = {}): Record<string, string>
 }
 
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
-  const res = await fetch(apiUrl(path), init);
+  const url = apiUrl(path);
+  log("api", init.method ?? "GET", url);
+  const res = await fetch(url, init);
+  log("api", "<-", res.status, url);
   if (res.status === 401) throw new UnauthorizedError();
   return res;
 }

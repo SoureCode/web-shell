@@ -1,5 +1,7 @@
 import { Terminal } from "@xterm/xterm";
+import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
+import { ProgressAddon } from "@xterm/addon-progress";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { TERMINAL_FONT_FAMILY, TERMINAL_FONT_SIZE, TERMINAL_SCROLLBACK } from "../config.js";
 
@@ -26,6 +28,8 @@ export function createTerminal(container: HTMLElement): TerminalBundle {
   const fit = new FitAddon();
   term.loadAddon(fit);
   term.loadAddon(new WebLinksAddon());
+  term.loadAddon(new ClipboardAddon());
+  term.loadAddon(new ProgressAddon());
   term.open(container);
   fit.fit();
 

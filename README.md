@@ -65,7 +65,7 @@ Set `CLIENT_DIST` to override the path, or leave it unset and the server auto-de
 | POST   | `/api/sessions`         | create session                 |
 | GET    | `/api/sessions/:id`     | session info                   |
 | DELETE | `/api/sessions/:id`     | destroy session                |
-| WS     | `/ws/sessions/:id`      | attach: history + I/O + resize |
+| WS     | `/api/sessions/:id/stream` | attach: history + I/O + resize |
 
 ### WebSocket protocol
 

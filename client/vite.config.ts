@@ -14,7 +14,7 @@ function reinstateBase(base: string): Plugin {
       server.middlewares.use((req, _res, next) => {
         const url = req.url;
         if (!url) return next();
-        if (!url.startsWith("/api") && !url.startsWith("/ws") && !url.startsWith(base)) {
+        if (!url.startsWith("/api") && !url.startsWith(base)) {
           req.url = base + url.replace(/^\//, "");
         }
         next();

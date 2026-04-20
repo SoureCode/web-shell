@@ -1,6 +1,7 @@
 import { openSessionSocket } from "../api/socket.js";
 import type { ClientMessage } from "../types/protocol.js";
 import type { AttachedTerminal, StatusListener } from "../types/terminal.js";
+import { log } from "../utils/log.js";
 import { createTerminal } from "./factory.js";
 import { parseServerMessage } from "./protocol.js";
 import { observeResize } from "./resize.js";
@@ -15,26 +16,45 @@ export function attachTerminal(
   let opened = false;
 
   const send = (msg: ClientMessage): void => {
-    if (opened && socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg));
+    if (opened && socket.readyState === socket.OPEN) {
+      log("attach", "send", sessionId, msg.type);
+      socket.send(JSON.stringify(msg));
+    }
   };
 
   const sendResize = (): void => send({ type: "resize", cols: term.cols, rows: term.rows });
 
   socket.addEventListener("open", () => {
     opened = true;
+    log("attach", "open", sessionId);
     onStatus(`connected · ${sessionId.slice(0, 8)}`);
     sendResize();
   });
 
   socket.addEventListener("message", (ev: MessageEvent<string>) => {
     const msg = parseServerMessage(ev.data);
-    if (!msg) return;
-    if (msg.type === "history" || msg.type === "output") term.write(msg.data);
-    else onStatus(`exited (code ${msg.code})`);
+    if (!msg) {
+      log("attach", "recv unparseable", sessionId, String(ev.data).slice(0, 80));
+      return;
+    }
+    if (msg.type === "history" || msg.type === "output") {
+      log("attach", "recv", sessionId, msg.type, msg.data.length, "bytes");
+      term.write(msg.data);
+    } else {
+      log("attach", "recv exit", sessionId, "code=", msg.code);
+      onStatus(`exited (code ${msg.code})`);
+    }
   });
 
-  socket.addEventListener("close", () => onStatus("disconnected"));
-  socket.addEventListener("error", () => onStatus("socket error"));
+  socket.addEventListener("close", (ev) => {
+    log("attach", "close", sessionId, "code=", ev.code, "reason=", ev.reason, "clean=", ev.wasClean);
+    onStatus(`disconnected (${ev.code})`);
+  });
+
+  socket.addEventListener("error", () => {
+    log("attach", "error", sessionId);
+    onStatus("socket error");
+  });
 
   const inputSub = term.onData((data) => send({ type: "input", data }));
   const resizeSub = term.onResize(sendResize);
@@ -44,6 +64,7 @@ export function attachTerminal(
     sessionId,
     fit: () => fit.fit(),
     dispose: () => {
+      log("attach", "dispose", sessionId, "readyState=", socket.readyState);
       stopObserve();
       inputSub.dispose();
       resizeSub.dispose();
