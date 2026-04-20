@@ -1,9 +1,14 @@
 import { spawn, type IPty } from "node-pty";
 import { randomUUID } from "node:crypto";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { SCROLLBACK_BYTES } from "../config.js";
 import type { SessionInfo } from "../types/session.js";
+import { sanitizeForReplay } from "./replay.js";
 import { Scrollback } from "./scrollback.js";
 import * as tmux from "./tmux.js";
+
+const TMUX_CONF = resolve(dirname(fileURLToPath(import.meta.url)), "../../tmux.conf");
 
 export type OutputListener = (chunk: string) => void;
 export type ExitListener = (code: number, signal?: number) => void;
@@ -47,6 +52,8 @@ export class Session {
     this.pty = spawn(
       "tmux",
       [
+        "-f",
+        TMUX_CONF,
         "new-session",
         "-A",
         "-s",
@@ -79,8 +86,7 @@ export class Session {
   }
 
   private async configureTmux(): Promise<void> {
-    await tmux.setOption(this.tmuxName, "status", "off");
-    await tmux.setOption(this.tmuxName, "history-limit", "10000");
+    await tmux.sourceFile(TMUX_CONF);
     await tmux.setTitle(this.tmuxName, this._title);
   }
 
@@ -116,7 +122,7 @@ export class Session {
   }
 
   history(): string {
-    return this.scrollback.snapshot();
+    return sanitizeForReplay(this.scrollback.snapshot());
   }
 
   subscribe(onData: OutputListener, onExit: ExitListener): () => void {

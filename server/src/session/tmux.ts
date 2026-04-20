@@ -84,3 +84,7 @@ export async function setOption(name: string, option: string, value: string): Pr
 export async function kill(name: string): Promise<void> {
   await run(["kill-session", "-t", name]).catch(() => {});
 }
+
+export async function sourceFile(path: string): Promise<void> {
+  await run(["source-file", path]).catch(() => {});
+}
