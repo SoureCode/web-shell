@@ -1,6 +1,7 @@
 export interface AttachedTerminal {
   readonly sessionId: string;
   fit(): void;
+  sendInput(data: string): void;
   dispose(): void;
 }
 

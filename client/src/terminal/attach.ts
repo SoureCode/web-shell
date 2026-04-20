@@ -65,6 +65,7 @@ export function attachTerminal(
   return {
     sessionId,
     fit: () => fit.fit(),
+    sendInput: (data) => send({ type: "input", data }),
     dispose: () => {
       log("attach", "dispose", sessionId);
       stopSearch();

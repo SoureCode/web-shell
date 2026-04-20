@@ -1,0 +1,36 @@
+.kb-toggle {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &[aria-pressed="true"] {
+    background: rgba(76, 141, 255, 0.2);
+    border-color: var(--accent);
+  }
+}
+
+.keyboard {
+  flex: 0 0 auto;
+  display: block;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  max-height: 55vh;
+  overflow: hidden;
+
+  &[hidden] {
+    display: none;
+  }
+}

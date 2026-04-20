@@ -27,8 +27,12 @@
           <button id="menu-toggle" class="menu-toggle" type="button" aria-label="toggle sidebar">
             <span></span><span></span><span></span>
           </button>
+          <button id="kb-toggle" class="kb-toggle" type="button" aria-pressed="false" aria-label="toggle keyboard" title="toggle keyboard">
+            <i class="bi bi-keyboard" aria-hidden="true"></i>
+          </button>
         </header>
         <div id="terminal" class="terminal"></div>
+        <virtual-keyboard id="keyboard" class="keyboard" locale="en" hidden></virtual-keyboard>
         <div id="status" class="status">no session</div>
       </main>
     </div>

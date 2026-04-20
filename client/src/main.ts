@@ -16,6 +16,7 @@ import { promptForToken } from "./ui/auth-prompt.js";
 import { mountDrawer } from "./ui/drawer.js";
 import { renderSessionList } from "./ui/sidebar.js";
 import { createStatusBar } from "./ui/status.js";
+import { mountVirtualKeyboard } from "./ui/virtual-keyboard.js";
 import { requireElement } from "./utils/dom.js";
 
 const appEl = requireElement<HTMLDivElement>("app");
@@ -26,8 +27,11 @@ const statusEl = requireElement<HTMLDivElement>("status");
 const menuToggle = requireElement<HTMLButtonElement>("menu-toggle");
 const backdrop = requireElement<HTMLDivElement>("backdrop");
 const pinBtn = requireElement<HTMLButtonElement>("pin-sidebar");
+const kbEl = requireElement<HTMLElement>("keyboard");
+const kbToggle = requireElement<HTMLButtonElement>("kb-toggle");
 
 const drawer = mountDrawer({ root: appEl, toggleBtn: menuToggle, backdrop, pinBtn });
+const keyboard = mountVirtualKeyboard(kbEl, kbToggle);
 const setStatus = createStatusBar(statusEl);
 
 let active: AttachedTerminal | null = null;
@@ -59,6 +63,7 @@ async function attach(id: string): Promise<void> {
     active.dispose();
   }
   active = attachTerminal(termEl, id, setStatus);
+  keyboard.setSend((data) => active?.sendInput(data));
   setActiveSessionId(id);
   await refresh();
 }
@@ -68,6 +73,7 @@ async function destroy(id: string): Promise<void> {
   if (active?.sessionId === id) {
     active.dispose();
     active = null;
+    keyboard.setSend(null);
     termEl.innerHTML = "";
     clearActiveSessionId();
     setStatus("no session");
