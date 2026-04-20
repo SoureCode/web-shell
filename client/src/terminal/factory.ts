@@ -1,10 +1,14 @@
 import { Terminal } from "@xterm/xterm";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
+import { LigaturesAddon } from "@xterm/addon-ligatures";
 import { ProgressAddon } from "@xterm/addon-progress";
 import { SearchAddon } from "@xterm/addon-search";
+import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { TERMINAL_FONT_FAMILY, TERMINAL_FONT_SIZE, TERMINAL_SCROLLBACK } from "../config.js";
+import { log } from "../utils/log.js";
 
 export interface TerminalBundle {
   readonly term: Terminal;
@@ -36,7 +40,25 @@ export function createTerminal(container: HTMLElement): TerminalBundle {
   term.loadAddon(new WebLinksAddon());
   term.loadAddon(new ClipboardAddon());
   term.loadAddon(new ProgressAddon());
+
+  const graphemes = new UnicodeGraphemesAddon();
+  term.loadAddon(graphemes);
+  term.unicode.activeVersion = "15-graphemes";
+
   term.open(container);
+
+  try {
+    const webgl = new WebglAddon();
+    webgl.onContextLoss(() => {
+      log("terminal", "webgl context lost, disposing addon");
+      webgl.dispose();
+    });
+    term.loadAddon(webgl);
+    term.loadAddon(new LigaturesAddon());
+  } catch (err: unknown) {
+    log("terminal", "webgl unavailable, using DOM renderer", String(err));
+  }
+
   fit.fit();
 
   return { term, fit, search };
