@@ -1,7 +1,8 @@
 import { defineConfig, type Plugin } from "vite";
 
+const proxyPort = process.env["PORT"] ?? "5173";
 const proxyUri = process.env["VSCODE_PROXY_URI"];
-const proxyUrl = proxyUri?.replace("{{port}}", "5173").replace(/\/$/, "");
+const proxyUrl = proxyUri?.replace("{{port}}", proxyPort).replace(/\/$/, "");
 const parsed = proxyUrl ? new URL(proxyUrl) : undefined;
 
 function reinstateBase(base: string): Plugin {
@@ -13,8 +14,7 @@ function reinstateBase(base: string): Plugin {
       server.middlewares.use((req, _res, next) => {
         const url = req.url;
         if (!url) return next();
-        const isProxied = url.startsWith("/api") || url.startsWith("/ws");
-        if (!isProxied && !url.startsWith(base)) {
+        if (!url.startsWith("/api") && !url.startsWith("/ws") && !url.startsWith(base)) {
           req.url = base + url.replace(/^\//, "");
         }
         next();
@@ -29,24 +29,8 @@ export default defineConfig(() => {
     base,
     plugins: [reinstateBase(base)],
     server: {
-      host: true,
-      port: 5173,
       strictPort: true,
       allowedHosts: true,
-      ...(parsed
-        ? {
-            hmr: {
-              host: parsed.hostname,
-              clientPort: 443,
-              protocol: "wss",
-              path: base,
-            },
-          }
-        : {}),
-      proxy: {
-        "/api": "http://127.0.0.1:4000",
-        "/ws": { target: "ws://127.0.0.1:4000", ws: true },
-      },
     },
   };
 });

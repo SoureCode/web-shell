@@ -1,37 +1,28 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { SessionManager } from "../session/manager.js";
+import type { RequestFallback } from "../types/fallback.js";
 import type { CreateSessionRequest } from "../types/session.js";
 import { extractBearer, isTokenValid } from "../utils/auth.js";
-import { applyCors } from "../utils/cors.js";
 import { readJson, sendJson } from "../utils/json.js";
-import { isOriginAllowed } from "../utils/origin.js";
+import { isRequestOriginAcceptable } from "../utils/origin.js";
 
 const SESSION_PATH = /^\/api\/sessions\/([^/]+)$/;
 
-export function createHttpHandler(manager: SessionManager) {
+export function createHttpHandler(manager: SessionManager, fallback: RequestFallback | null) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    const origin = req.headers.origin;
-
-    if (origin !== undefined && !isOriginAllowed(origin)) {
+    if (!isRequestOriginAcceptable(req)) {
       sendJson(res, 403, { error: "origin not allowed" });
-      return;
-    }
-
-    applyCors(res, origin);
-
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    if (!isTokenValid(extractBearer(req))) {
-      sendJson(res, 401, { error: "unauthorized" });
       return;
     }
 
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
     const path = url.pathname;
+    const isApi = path.startsWith("/api/");
+
+    if (isApi && !isTokenValid(extractBearer(req))) {
+      sendJson(res, 401, { error: "unauthorized" });
+      return;
+    }
 
     if (req.method === "GET" && path === "/api/sessions") {
       sendJson(res, 200, manager.list());
@@ -59,6 +50,16 @@ export function createHttpHandler(manager: SessionManager) {
         sendJson(res, ok ? 200 : 404, { ok });
         return;
       }
+    }
+
+    if (isApi) {
+      sendJson(res, 404, { error: "not found" });
+      return;
+    }
+
+    if (fallback) {
+      await fallback(req, res);
+      return;
     }
 
     sendJson(res, 404, { error: "not found" });

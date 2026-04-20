@@ -44,14 +44,18 @@ npm run dev
 - Server: `http://localhost:4000`
 - Client: `http://localhost:5173` (proxies `/api` and `/ws` to the server)
 
-## Build
+## Build / single-process deploy
 
 ```bash
 npm run build
 npm start
+# or shorthand:
+npm run preview
 ```
 
-`npm run build` compiles the server to `server/dist/` and bundles the client to `client/dist/`. `npm start` runs the compiled server.
+`npm run build` compiles the server to `server/dist/` and bundles the client to `client/dist/`. `npm start` runs the compiled server, which also serves `client/dist/` statically with SPA fallback — one port, one origin, no Vite / CORS in the way.
+
+Set `CLIENT_DIST` to override the path, or leave it unset and the server auto-detects `../client/dist` next to its own build output.
 
 ## API
 
