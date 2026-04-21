@@ -4,7 +4,7 @@
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   color: var(--fg-dim);
   display: inline-flex;
@@ -19,8 +19,12 @@
   }
 
   &[aria-pressed="true"] {
-    color: var(--fg);
-    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    background: var(--accent);
+
+    &:hover {
+      filter: brightness(1.15);
+    }
   }
 }
 

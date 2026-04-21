@@ -14,7 +14,7 @@
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 0;
   color: var(--fg-dim);
   cursor: pointer;
   display: flex;
@@ -28,7 +28,7 @@
     width: 18px;
     height: 2px;
     background: currentColor;
-    border-radius: 1px;
+    border-radius: 0;
   }
 
   &:hover {

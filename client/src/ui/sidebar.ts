@@ -45,7 +45,7 @@ function renderItem(session: SessionInfo, active: boolean, handlers: SidebarHand
   const actions = document.createElement("div");
   actions.className = "session-list__actions";
 
-  const renameBtn = makeIconButton("bi-pencil", "rename");
+  const renameBtn = makeIconButton("bi-pencil", "rename", "accent");
   renameBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     enterRenameMode(li, label, renameBtn, session, handlers);
@@ -97,10 +97,17 @@ function midpointOrder(prev: number | undefined, next: number | undefined): numb
   return (prev + next) / 2;
 }
 
-function makeIconButton(iconClass: string, label: string): HTMLButtonElement {
+type ActionVariant = "accent" | "success" | "danger" | "neutral";
+
+function makeIconButton(
+  iconClass: string,
+  label: string,
+  variant: ActionVariant = "neutral",
+): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "session-list__action";
+  if (variant !== "neutral") btn.classList.add(`session-list__action--${variant}`);
   btn.title = label;
   btn.setAttribute("aria-label", label);
   const icon = document.createElement("i");
@@ -149,6 +156,8 @@ function enterRenameMode(
     if (icon) icon.className = prevIconClass;
     renameBtn.title = prevTitle;
     if (prevAria) renameBtn.setAttribute("aria-label", prevAria);
+    renameBtn.classList.remove("session-list__action--success");
+    renameBtn.classList.add("session-list__action--accent");
     if (input.isConnected) input.replaceWith(label);
   };
 
@@ -184,6 +193,8 @@ function enterRenameMode(
   if (icon) icon.className = "bi bi-check-lg";
   renameBtn.title = "save";
   renameBtn.setAttribute("aria-label", "save");
+  renameBtn.classList.remove("session-list__action--accent");
+  renameBtn.classList.add("session-list__action--success");
   input.addEventListener("keydown", onKey);
   input.addEventListener("blur", onBlur);
   renameBtn.addEventListener("mousedown", onBtnMouseDown);
@@ -199,10 +210,9 @@ function renderDestroyControl(id: string, handlers: SidebarHandlers): HTMLDivEle
   const wrap = document.createElement("div");
   wrap.className = "session-list__destroy";
 
-  const trash = makeIconButton("bi-trash", "destroy");
-  const confirm = makeIconButton("bi-check-lg", "confirm destroy");
+  const trash = makeIconButton("bi-trash", "destroy", "danger");
+  const confirm = makeIconButton("bi-check-lg", "confirm destroy", "danger");
   const cancel = makeIconButton("bi-x-lg", "cancel");
-  confirm.classList.add("session-list__action--danger");
 
   let timeoutId = 0;
   const setArmed = (armed: boolean): void => {
