@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { spawn, type IPty } from "node-pty";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
@@ -8,7 +9,11 @@ import { sanitizeForReplay } from "./replay.js";
 import { Scrollback } from "./scrollback.js";
 import * as tmux from "./tmux.js";
 
-const TMUX_CONF = resolve(dirname(fileURLToPath(import.meta.url)), "../../tmux.conf");
+const here = dirname(fileURLToPath(import.meta.url));
+// Dev (src/session/) and bundled (dist/) layouts put tmux.conf at different depths.
+const TMUX_CONF =
+  [resolve(here, "../../tmux.conf"), resolve(here, "../tmux.conf")].find(existsSync) ??
+  resolve(here, "../tmux.conf");
 
 export type OutputListener = (chunk: string) => void;
 export type ExitListener = (code: number, signal?: number) => void;
