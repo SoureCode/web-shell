@@ -56,3 +56,13 @@ export async function renameSession(id: string, title: string): Promise<SessionI
   if (!res.ok) throw new Error(`rename failed: ${res.status}`);
   return (await res.json()) as SessionInfo;
 }
+
+export async function reorderSession(id: string, order: number): Promise<SessionInfo> {
+  const res = await request(`api/sessions/${id}`, {
+    method: "PATCH",
+    headers: authHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ order }),
+  });
+  if (!res.ok) throw new Error(`reorder failed: ${res.status}`);
+  return (await res.json()) as SessionInfo;
+}

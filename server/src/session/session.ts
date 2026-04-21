@@ -17,6 +17,7 @@ export interface SessionOptions {
   readonly cwd: string;
   readonly cols: number;
   readonly rows: number;
+  readonly order?: number;
   readonly reattach?: boolean;
 }
 
@@ -28,6 +29,7 @@ export class Session {
   private _title: string;
   private _cols: number;
   private _rows: number;
+  private _order: number;
   private readonly pty: IPty;
   private readonly scrollback = new Scrollback(SCROLLBACK_BYTES);
   private readonly outputListeners = new Set<OutputListener>();
@@ -41,6 +43,7 @@ export class Session {
     this.shell = opts.shell;
     this._cols = opts.cols;
     this._rows = opts.rows;
+    this._order = opts.order ?? this.createdAt;
 
     const sock = dtach.socketPath(this.id);
     const pidFile = dtach.pidPath(this.id);
@@ -73,11 +76,16 @@ export class Session {
       for (const listener of this.exitListeners) listener(exitCode, signal);
     });
 
+    this.persistMeta();
+  }
+
+  private persistMeta(): void {
     dtach.writeMeta({
       id: this.id,
       title: this._title,
       shell: this.shell,
       createdAt: this.createdAt,
+      order: this._order,
     });
   }
 
@@ -87,12 +95,16 @@ export class Session {
 
   setTitle(title: string): void {
     this._title = title;
-    dtach.writeMeta({
-      id: this.id,
-      title,
-      shell: this.shell,
-      createdAt: this.createdAt,
-    });
+    this.persistMeta();
+  }
+
+  get order(): number {
+    return this._order;
+  }
+
+  setOrder(order: number): void {
+    this._order = order;
+    this.persistMeta();
   }
 
   get cols(): number {
@@ -216,6 +228,7 @@ export class Session {
       cols: this._cols,
       rows: this._rows,
       createdAt: this.createdAt,
+      order: this._order,
     };
   }
 }

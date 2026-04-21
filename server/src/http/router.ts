@@ -105,12 +105,18 @@ export function createHttpHandler(manager: SessionManager, fallback: RequestFall
         return;
       }
       if (req.method === "PATCH") {
-        const body = await readJson<{ title?: string }>(req).catch(() => ({}) as { title?: string });
-        if (typeof body.title !== "string" || !body.title.trim()) {
-          sendJson(res, 400, { error: "title required" });
+        const body = await readJson<{ title?: string; order?: number }>(req).catch(
+          () => ({}) as { title?: string; order?: number },
+        );
+        const hasTitle = typeof body.title === "string" && body.title.trim().length > 0;
+        const hasOrder = typeof body.order === "number" && Number.isFinite(body.order);
+        if (!hasTitle && !hasOrder) {
+          sendJson(res, 400, { error: "title or order required" });
           return;
         }
-        const session = manager.rename(id, body.title.trim());
+        let session: ReturnType<typeof manager.get>;
+        if (hasTitle) session = manager.rename(id, (body.title as string).trim());
+        if (hasOrder) session = manager.reorder(id, body.order as number);
         if (!session) {
           sendJson(res, 404, { error: "not found" });
           return;

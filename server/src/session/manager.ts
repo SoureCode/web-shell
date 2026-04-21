@@ -35,6 +35,7 @@ export class SessionManager {
         cwd: defaultCwd(),
         cols: DEFAULT_COLS,
         rows: DEFAULT_ROWS,
+        ...(meta.order !== undefined ? { order: meta.order } : {}),
         reattach: true,
       });
       this.sessions.set(session.id, session);
@@ -76,6 +77,14 @@ export class SessionManager {
     return session;
   }
 
+  reorder(id: string, order: number): Session | undefined {
+    const session = this.sessions.get(id);
+    if (!session) return undefined;
+    session.setOrder(order);
+    this.emitChange();
+    return session;
+  }
+
   get(id: string): Session | undefined {
     const s = this.sessions.get(id);
     log("session", "get", id, s ? "hit" : "miss");
@@ -83,7 +92,9 @@ export class SessionManager {
   }
 
   list(): SessionInfo[] {
-    const infos = [...this.sessions.values()].map((s) => s.info());
+    const infos = [...this.sessions.values()]
+      .map((s) => s.info())
+      .sort((a, b) => a.order - b.order);
     log("session", "list", infos.length);
     return infos;
   }

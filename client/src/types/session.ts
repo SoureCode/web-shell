@@ -5,6 +5,7 @@ export interface SessionInfo {
   readonly cols: number;
   readonly rows: number;
   readonly createdAt: number;
+  readonly order: number;
 }
 
 export interface CreateSessionInput {

@@ -31,6 +31,7 @@ export interface SessionMeta {
   readonly title: string;
   readonly shell: string;
   readonly createdAt: number;
+  readonly order?: number;
 }
 
 export function writeMeta(meta: SessionMeta): void {

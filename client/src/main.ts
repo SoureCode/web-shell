@@ -2,7 +2,14 @@ import "./styles/main.scss";
 import "@xterm/xterm/css/xterm.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
-import { UnauthorizedError, createSession, destroySession, listSessions, renameSession } from "./api/sessions.js";
+import {
+  UnauthorizedError,
+  createSession,
+  destroySession,
+  listSessions,
+  renameSession,
+  reorderSession,
+} from "./api/sessions.js";
 import { subscribeSessionList } from "./api/socket.js";
 import { log } from "./utils/log.js";
 import {
@@ -15,7 +22,7 @@ import type { SessionInfo } from "./types/session.js";
 import type { AttachedTerminal } from "./types/terminal.js";
 import { promptForToken } from "./ui/auth-prompt.js";
 import { mountDrawer } from "./ui/drawer.js";
-import { renderSessionList } from "./ui/sidebar.js";
+import { mountSortable, renderSessionList } from "./ui/sidebar.js";
 import { createStatusBar } from "./ui/status.js";
 import { mountVirtualKeyboard } from "./ui/virtual-keyboard.js";
 import { requireElement } from "./utils/dom.js";
@@ -47,8 +54,11 @@ function render(sessions: SessionInfo[]): void {
       await renameSession(id, title);
     },
     onDestroy: (id) => void destroy(id),
+    onReorder: (id, order) => void reorderSession(id, order),
   });
 }
+
+mountSortable(sessionListEl, (id, order) => void reorderSession(id, order));
 
 async function refresh(): Promise<SessionInfo[]> {
   const sessions = await listSessions();
