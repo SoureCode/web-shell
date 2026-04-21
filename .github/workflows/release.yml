@@ -27,7 +27,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci --ignore-scripts
+      - run: npm ci
 
       - run: npm run build
 
