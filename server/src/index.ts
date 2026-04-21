@@ -7,12 +7,16 @@ import { createStaticFallback } from "./http/static-fallback.js";
 import { SessionManager } from "./session/manager.js";
 import type { RequestFallback } from "./types/fallback.js";
 import { isAuthDisabled } from "./utils/auth.js";
+import { DTACH_MISSING_MESSAGE, isDtachAvailable } from "./utils/preflight.js";
 import { mountWsRouter } from "./ws/router.js";
 
 process.env["PORT"] = String(PORT);
 
+const dtachOk = isDtachAvailable();
+if (!dtachOk) console.warn(`[web-shell] warning: ${DTACH_MISSING_MESSAGE}`);
+
 const manager = new SessionManager();
-await manager.rehydrate();
+if (dtachOk) await manager.rehydrate();
 const server = http.createServer();
 mountWsRouter(server, manager);
 

@@ -35,7 +35,10 @@ export async function createSession(input: CreateSessionInput = {}): Promise<Ses
     headers: authHeaders({ "content-type": "application/json" }),
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`create failed: ${res.status}`);
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `create failed: ${res.status}`);
+  }
   return (await res.json()) as SessionInfo;
 }
 

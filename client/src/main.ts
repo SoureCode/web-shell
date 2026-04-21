@@ -100,7 +100,17 @@ async function createAndAttach(): Promise<void> {
   await attach(info.id);
 }
 
-newBtn.addEventListener("click", () => void createAndAttach());
+async function tryCreateAndAttach(): Promise<void> {
+  try {
+    await withAuthRetry(createAndAttach);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    log("main", "create failed", message);
+    setStatus(message);
+  }
+}
+
+newBtn.addEventListener("click", () => void tryCreateAndAttach());
 
 async function withAuthRetry<T>(op: () => Promise<T>): Promise<T> {
   for (;;) {
@@ -122,7 +132,7 @@ async function bootstrap(): Promise<void> {
     drawer.closeIfUnpinned();
     await attach(target.id);
   } else {
-    await withAuthRetry(createAndAttach);
+    await tryCreateAndAttach();
   }
   subscribeSessionList(render);
 }

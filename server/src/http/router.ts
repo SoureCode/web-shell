@@ -6,6 +6,7 @@ import { extractBearer, extractQueryToken, isTokenValid } from "../utils/auth.js
 import { readJson, sendJson } from "../utils/json.js";
 import { log } from "../utils/log.js";
 import { isRequestOriginAcceptable } from "../utils/origin.js";
+import { DTACH_MISSING_MESSAGE, isDtachAvailable } from "../utils/preflight.js";
 import { handleSseStream } from "./sse.js";
 
 const SESSION_PATH = /^\/api\/sessions\/([^/]+)$/;
@@ -84,6 +85,10 @@ export function createHttpHandler(manager: SessionManager, fallback: RequestFall
     }
 
     if (req.method === "POST" && path === "/api/sessions") {
+      if (!isDtachAvailable()) {
+        sendJson(res, 503, { error: DTACH_MISSING_MESSAGE });
+        return;
+      }
       const body = await readJson<CreateSessionRequest>(req).catch(() => ({}) as CreateSessionRequest);
       const session = manager.create(body);
       sendJson(res, 201, session.info());
