@@ -16,6 +16,8 @@ export function bindSocket(ws: WebSocket, session: Session): void {
   log("ws", "send history", id, history.length, "bytes");
   send({ type: "history", data: history });
 
+  let firstResize = true;
+
   const unsubscribe = session.subscribe(
     (chunk) => {
       log("ws", "send output", id, chunk.length, "bytes");
@@ -43,6 +45,10 @@ export function bindSocket(ws: WebSocket, session: Session): void {
     } else {
       log("ws", "recv resize", id, msg.cols, "x", msg.rows);
       session.resize(msg.cols, msg.rows);
+      if (firstResize) {
+        firstResize = false;
+        session.pokeWinch();
+      }
     }
   });
 

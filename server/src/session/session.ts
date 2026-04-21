@@ -116,6 +116,27 @@ export class Session {
     }
   }
 
+  // Force the inner shell to emit a fresh redraw of any fullscreen TUI
+  // (vim, less, htop…). A new WS attach replays the byte log, but the
+  // app's in-memory screen state hasn't changed, and a same-dim resize
+  // doesn't generate SIGWINCH. Toggle rows by one and back — the delay
+  // between calls is required: SIGWINCH coalesces, so two sync resizes
+  // would collapse to the unchanged final dims and produce no signal.
+  pokeWinch(): void {
+    try {
+      this.pty.resize(this._cols, Math.max(1, this._rows + 1));
+    } catch {
+      return;
+    }
+    setTimeout(() => {
+      try {
+        this.pty.resize(this._cols, this._rows);
+      } catch {
+        // pty already exited
+      }
+    }, 50);
+  }
+
   history(): string {
     return sanitizeForReplay(this.scrollback.snapshot());
   }
