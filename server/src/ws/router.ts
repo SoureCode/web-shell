@@ -5,8 +5,10 @@ import type { SessionManager } from "../session/manager.js";
 import { log } from "../utils/log.js";
 import { isRequestOriginAcceptable } from "../utils/origin.js";
 import { bindSocket } from "./connection.js";
+import { bindEventsSocket } from "./events.js";
 
 const WS_PATH = /^\/api\/sessions\/([^/]+)\/stream$/;
+const EVENTS_PATH = "/api/sessions/events";
 
 function rejectUpgrade(socket: Duplex, status: number, reason: string): void {
   socket.write(`HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\n\r\n`);
@@ -21,15 +23,23 @@ export function mountWsRouter(server: HttpServer, manager: SessionManager): void
     const origin = req.headers.origin ?? "-";
     log("ws", "upgrade", url.pathname, "origin=", origin);
 
-    const match = WS_PATH.exec(url.pathname);
-    if (!match) {
-      log("ws", "upgrade pass-through (not our path)", url.pathname);
-      return;
-    }
-
     if (!isRequestOriginAcceptable(req)) {
       log("ws", "upgrade rejected: origin not acceptable", origin);
       rejectUpgrade(socket, 403, "Forbidden");
+      return;
+    }
+
+    if (url.pathname === EVENTS_PATH) {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        log("ws", "upgrade accepted events");
+        bindEventsSocket(ws, manager);
+      });
+      return;
+    }
+
+    const match = WS_PATH.exec(url.pathname);
+    if (!match) {
+      log("ws", "upgrade pass-through (not our path)", url.pathname);
       return;
     }
 

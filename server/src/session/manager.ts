@@ -5,8 +5,22 @@ import { defaultCwd, defaultShell } from "../utils/shell.js";
 import * as dtach from "./dtach.js";
 import { Session } from "./session.js";
 
+export type SessionListListener = (sessions: SessionInfo[]) => void;
+
 export class SessionManager {
   private readonly sessions = new Map<string, Session>();
+  private readonly listListeners = new Set<SessionListListener>();
+
+  onChange(listener: SessionListListener): () => void {
+    this.listListeners.add(listener);
+    return () => this.listListeners.delete(listener);
+  }
+
+  private emitChange(): void {
+    if (this.listListeners.size === 0) return;
+    const snapshot = this.list();
+    for (const listener of this.listListeners) listener(snapshot);
+  }
 
   async rehydrate(): Promise<void> {
     const ids = dtach.listSessionIds();
@@ -28,8 +42,10 @@ export class SessionManager {
       session.onExit((code, signal) => {
         log("session", "removed after exit", session.id, "code=", code, "signal=", signal);
         this.sessions.delete(session.id);
+        this.emitChange();
       });
     }
+    this.emitChange();
   }
 
   create(req: CreateSessionRequest): Session {
@@ -46,7 +62,17 @@ export class SessionManager {
     session.onExit((code, signal) => {
       log("session", "removed after exit", session.id, "code=", code, "signal=", signal);
       this.sessions.delete(session.id);
+      this.emitChange();
     });
+    this.emitChange();
+    return session;
+  }
+
+  rename(id: string, title: string): Session | undefined {
+    const session = this.sessions.get(id);
+    if (!session) return undefined;
+    session.setTitle(title);
+    this.emitChange();
     return session;
   }
 
@@ -78,6 +104,7 @@ export class SessionManager {
     log("session", "destroy", id);
     session.kill();
     this.sessions.delete(id);
+    this.emitChange();
     return true;
   }
 }

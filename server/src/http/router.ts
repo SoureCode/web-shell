@@ -105,17 +105,16 @@ export function createHttpHandler(manager: SessionManager, fallback: RequestFall
         return;
       }
       if (req.method === "PATCH") {
-        const session = manager.get(id);
-        if (!session) {
-          sendJson(res, 404, { error: "not found" });
-          return;
-        }
         const body = await readJson<{ title?: string }>(req).catch(() => ({}) as { title?: string });
         if (typeof body.title !== "string" || !body.title.trim()) {
           sendJson(res, 400, { error: "title required" });
           return;
         }
-        session.setTitle(body.title.trim());
+        const session = manager.rename(id, body.title.trim());
+        if (!session) {
+          sendJson(res, 404, { error: "not found" });
+          return;
+        }
         sendJson(res, 200, session.info());
         return;
       }

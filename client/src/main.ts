@@ -3,6 +3,7 @@ import "@xterm/xterm/css/xterm.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 import { UnauthorizedError, createSession, destroySession, listSessions, renameSession } from "./api/sessions.js";
+import { subscribeSessionList } from "./api/socket.js";
 import { log } from "./utils/log.js";
 import {
   clearActiveSessionId,
@@ -36,8 +37,7 @@ const setStatus = createStatusBar(statusEl);
 
 let active: AttachedTerminal | null = null;
 
-async function refresh(): Promise<SessionInfo[]> {
-  const sessions = await listSessions();
+function render(sessions: SessionInfo[]): void {
   renderSessionList(sessionListEl, sessions, active?.sessionId ?? null, {
     onSelect: (id) => {
       drawer.closeIfUnpinned();
@@ -45,10 +45,14 @@ async function refresh(): Promise<SessionInfo[]> {
     },
     onRename: async (id, title) => {
       await renameSession(id, title);
-      await refresh();
     },
     onDestroy: (id) => void destroy(id),
   });
+}
+
+async function refresh(): Promise<SessionInfo[]> {
+  const sessions = await listSessions();
+  render(sessions);
   return sessions;
 }
 
@@ -78,7 +82,6 @@ async function destroy(id: string): Promise<void> {
     clearActiveSessionId();
     setStatus("no session");
   }
-  await refresh();
 }
 
 async function createAndAttach(): Promise<void> {
@@ -107,6 +110,7 @@ async function bootstrap(): Promise<void> {
   const target = sessions.find((s) => s.id === saved) ?? sessions[0];
   if (target) await attach(target.id);
   else setStatus("no session — press + new");
+  subscribeSessionList(render);
 }
 
 void bootstrap();
