@@ -17,6 +17,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         "node-pty",
+        "ws",
         "vite",
         ...builtinModules,
         ...builtinModules.map((m) => `node:${m}`),

@@ -22,7 +22,8 @@
     "preview": "npm run build && npm run start"
   },
   "dependencies": {
-    "node-pty": "^1.1.0"
+    "node-pty": "^1.1.0",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@sourecode/virtual-keyboard": "github:SoureCode/virtual-keyboard#v0.1.2",
@@ -41,7 +42,6 @@
     "sass": "^1.99.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.9",
-    "ws": "^8.20.0"
+    "vite": "^8.0.9"
   }
 }
