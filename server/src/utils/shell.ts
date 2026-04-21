@@ -5,5 +5,5 @@ export function defaultShell(): string {
 }
 
 export function defaultCwd(): string {
-  return process.env["HOME"] ?? process.cwd();
+  return process.env["WEB_SHELL_CWD"] ?? process.env["HOME"] ?? process.cwd();
 }
