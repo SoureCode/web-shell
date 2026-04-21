@@ -44,7 +44,7 @@ export function bindSocket(ws: WebSocket, session: Session): void {
       session.write(msg.data);
     } else {
       log("ws", "recv resize", id, msg.cols, "x", msg.rows);
-      session.resize(msg.cols, msg.rows);
+      session.setClientSize(ws, msg.cols, msg.rows);
       if (firstResize) {
         firstResize = false;
         session.pokeWinch();
@@ -54,6 +54,7 @@ export function bindSocket(ws: WebSocket, session: Session): void {
 
   ws.on("close", (code, reason) => {
     log("ws", "close", id, "code=", code, "reason=", reason.toString());
+    session.removeClient(ws);
     unsubscribe();
   });
 

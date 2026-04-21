@@ -32,6 +32,7 @@ export class Session {
   private readonly scrollback = new Scrollback(SCROLLBACK_BYTES);
   private readonly outputListeners = new Set<OutputListener>();
   private readonly exitListeners = new Set<ExitListener>();
+  private readonly clientSizes = new Map<object, { cols: number; rows: number }>();
 
   constructor(opts: SessionOptions) {
     this.id = opts.id ?? randomUUID();
@@ -111,6 +112,40 @@ export class Session {
     this._rows = rows;
     try {
       this.pty.resize(cols, rows);
+    } catch {
+      // pty already exited
+    }
+  }
+
+  // Per-client size tracking. When several clients share a session, we
+  // size the PTY to the min across all of them so nobody sees wrapped
+  // or truncated output — larger viewers just see blank margin. The
+  // client key can be any stable object (the WebSocket works fine).
+  setClientSize(key: object, cols: number, rows: number): void {
+    const current = this.clientSizes.get(key);
+    if (current && current.cols === cols && current.rows === rows) return;
+    this.clientSizes.set(key, { cols, rows });
+    this.applyMinSize();
+  }
+
+  removeClient(key: object): void {
+    if (!this.clientSizes.delete(key)) return;
+    this.applyMinSize();
+  }
+
+  private applyMinSize(): void {
+    if (this.clientSizes.size === 0) return;
+    let minCols = Infinity;
+    let minRows = Infinity;
+    for (const { cols, rows } of this.clientSizes.values()) {
+      if (cols < minCols) minCols = cols;
+      if (rows < minRows) minRows = rows;
+    }
+    if (minCols === this._cols && minRows === this._rows) return;
+    this._cols = minCols;
+    this._rows = minRows;
+    try {
+      this.pty.resize(minCols, minRows);
     } catch {
       // pty already exited
     }
