@@ -9,8 +9,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--border);
+    gap: 0.5rem;
 
     h1 {
       font-size: 0.9rem;
@@ -20,18 +21,34 @@
     }
 
     button {
-      background: var(--accent);
-      color: white;
-      border: 0;
-      padding: 0.25rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
+      width: 2.25rem;
+      height: 2.25rem;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--fg-dim);
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
 
       &:hover {
-        filter: brightness(1.1);
+        color: var(--fg);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      &[aria-pressed="true"] {
+        color: var(--fg);
+        background: rgba(255, 255, 255, 0.08);
       }
     }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
   }
 }
 
@@ -75,6 +92,9 @@
 
   &__label {
     flex: 1;
+    min-width: 0;
+    min-height: 2.25rem;
+    box-sizing: border-box;
     background: transparent;
     border: 0;
     color: var(--fg);
@@ -82,6 +102,7 @@
     padding: 0.5rem 0.6rem;
     cursor: pointer;
     font-size: 0.85rem;
+    line-height: 1.25;
     font-family: inherit;
   }
 
@@ -141,14 +162,18 @@
 
   &__edit {
     flex: 1;
+    min-width: 0;
+    min-height: 2.25rem;
+    box-sizing: border-box;
     background: var(--bg);
     color: var(--fg);
     border: 1px solid var(--accent);
     border-radius: 4px;
-    padding: 0.45rem 0.55rem;
-    margin: 0.05rem 0;
+    padding: calc(0.5rem - 1px) calc(0.6rem - 1px);
+    margin: 0;
     font-family: inherit;
     font-size: 0.85rem;
+    line-height: 1.25;
     outline: none;
   }
 }

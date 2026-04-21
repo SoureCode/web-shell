@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.5rem;
+  padding: 0.5rem 0.75rem;
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border);
 }
@@ -13,8 +13,9 @@
   height: 2.25rem;
   padding: 0;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 6px;
+  color: var(--fg-dim);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -26,38 +27,13 @@
     display: block;
     width: 18px;
     height: 2px;
-    background: var(--fg);
+    background: currentColor;
     border-radius: 1px;
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-  }
-}
-
-.sidebar__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.sidebar__pin {
-  background: transparent;
-  color: var(--fg-dim);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.7rem;
-  cursor: pointer;
-
-  &[aria-pressed="true"] {
-    background: rgba(76, 141, 255, 0.2);
     color: var(--fg);
-    border-color: var(--accent);
-  }
-
-  &:hover {
-    color: var(--fg);
+    background: rgba(255, 255, 255, 0.05);
   }
 }
 

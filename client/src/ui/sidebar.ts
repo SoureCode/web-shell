@@ -48,7 +48,7 @@ function renderItem(session: SessionInfo, active: boolean, handlers: SidebarHand
   const renameBtn = makeIconButton("bi-pencil", "rename");
   renameBtn.addEventListener("click", (event) => {
     event.stopPropagation();
-    enterRenameMode(li, label, session, handlers);
+    enterRenameMode(li, label, renameBtn, session, handlers);
   });
 
   const destroy = renderDestroyControl(session.id, handlers);
@@ -113,15 +113,24 @@ function makeIconButton(iconClass: string, label: string): HTMLButtonElement {
 function enterRenameMode(
   li: HTMLLIElement,
   label: HTMLButtonElement,
+  renameBtn: HTMLButtonElement,
   session: SessionInfo,
   handlers: SidebarHandlers,
 ): void {
+  // The pencil's original click handler still fires during rename mode;
+  // bail so clicking the now-"save" button doesn't re-enter.
+  if (!label.isConnected) return;
   const input = document.createElement("input");
   input.type = "text";
   input.className = "session-list__edit";
   input.value = session.title;
   input.autocomplete = "off";
   input.spellcheck = false;
+
+  const icon = renameBtn.querySelector("i");
+  const prevIconClass = icon?.className ?? "bi bi-pencil";
+  const prevTitle = renameBtn.title;
+  const prevAria = renameBtn.getAttribute("aria-label") ?? "";
 
   let done = false;
   const commit = (save: boolean): void => {
@@ -135,6 +144,11 @@ function enterRenameMode(
   const cleanup = (): void => {
     input.removeEventListener("keydown", onKey);
     input.removeEventListener("blur", onBlur);
+    renameBtn.removeEventListener("mousedown", onBtnMouseDown);
+    renameBtn.removeEventListener("click", onBtnClick);
+    if (icon) icon.className = prevIconClass;
+    renameBtn.title = prevTitle;
+    if (prevAria) renameBtn.setAttribute("aria-label", prevAria);
     if (input.isConnected) input.replaceWith(label);
   };
 
@@ -150,9 +164,30 @@ function enterRenameMode(
 
   const onBlur = (): void => commit(true);
 
+  // Suppress input blur when the user mousedowns on the save button, or
+  // the blur handler would fire first and cleanup before the click lands.
+  const onBtnMouseDown = (e: MouseEvent): void => {
+    e.preventDefault();
+  };
+  // Ignore quick repeat clicks on the same button — the first opened
+  // rename mode, a follow-up within the arm window would save without
+  // giving the user a chance to type.
+  const SAVE_ARM_MS = 250;
+  const armedAt = performance.now();
+  const onBtnClick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    if (performance.now() - armedAt < SAVE_ARM_MS) return;
+    commit(true);
+  };
+
   label.replaceWith(input);
+  if (icon) icon.className = "bi bi-check-lg";
+  renameBtn.title = "save";
+  renameBtn.setAttribute("aria-label", "save");
   input.addEventListener("keydown", onKey);
   input.addEventListener("blur", onBlur);
+  renameBtn.addEventListener("mousedown", onBtnMouseDown);
+  renameBtn.addEventListener("click", onBtnClick);
   input.focus();
   input.select();
 
