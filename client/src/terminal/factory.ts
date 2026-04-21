@@ -46,6 +46,20 @@ export function createTerminal(container: HTMLElement): TerminalBundle {
   term.open(container);
   fit.fit();
 
+  // The sync fit above can measure with pre-layout container dims or before
+  // the terminal font has finished loading (wrong char metrics → wrong cols).
+  // ResizeObserver only reacts to container-size changes, not font-metric
+  // changes, so schedule explicit re-fits. Each is a no-op if dims are stable.
+  const refit = (): void => {
+    try {
+      fit.fit();
+    } catch {
+      // container removed before callback ran
+    }
+  };
+  requestAnimationFrame(refit);
+  void document.fonts?.ready.then(refit);
+
   const viewport = term.element;
   if (viewport) {
     viewport.addEventListener(
