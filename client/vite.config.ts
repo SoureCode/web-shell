@@ -27,6 +27,7 @@ export default defineConfig(() => {
   const pathname = parsed?.pathname ?? "/";
   const base = !parsed || pathname === "/" ? "/" : `${pathname.replace(/\/$/, "")}/`;
   return {
+    root: import.meta.dirname,
     base,
     plugins: [reinstateBase(base)],
     server: {

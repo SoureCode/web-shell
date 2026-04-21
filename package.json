@@ -2,14 +2,46 @@
   "name": "web-shell",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["server", "client"],
+  "type": "module",
+  "main": "server/dist/index.js",
+  "bin": {
+    "web-shell": "server/dist/index.js"
+  },
+  "files": [
+    "server/dist",
+    "server/tmux.conf",
+    "client/dist"
+  ],
   "scripts": {
-    "dev": "npm --workspace server run dev",
-    "build": "npm --workspace server run build && npm --workspace client run build",
-    "start": "npm --workspace server run start",
+    "dev": "NODE_ENV=development node --import tsx --watch --watch-path=server/src server/src/index.ts",
+    "build:server": "vite build -c server/vite.config.ts",
+    "build:client": "vite build -c client/vite.config.ts",
+    "build": "npm run build:server && npm run build:client",
+    "typecheck": "tsc --noEmit -p server/tsconfig.json && tsc --noEmit -p client/tsconfig.json",
+    "start": "node server/dist/index.js",
     "preview": "npm run build && npm run start"
   },
+  "dependencies": {
+    "node-pty": "^1.1.0"
+  },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "@sourecode/virtual-keyboard": "github:SoureCode/virtual-keyboard#v0.1.2",
+    "@types/node": "^25.6.0",
+    "@types/ws": "^8.18.1",
+    "@xterm/addon-clipboard": "^0.2.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-ligatures": "^0.10.0",
+    "@xterm/addon-progress": "^0.2.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-unicode-graphemes": "^0.4.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "@xterm/xterm": "^6.0.0",
+    "bootstrap-icons": "^1.13.1",
+    "sass": "^1.99.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.9",
+    "ws": "^8.20.0"
   }
 }
