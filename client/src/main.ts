@@ -118,8 +118,12 @@ async function bootstrap(): Promise<void> {
   const sessions = await withAuthRetry(refresh);
   const saved = getActiveSessionId();
   const target = sessions.find((s) => s.id === saved) ?? sessions[0];
-  if (target) await attach(target.id);
-  else setStatus("no session — press + new");
+  if (target) {
+    drawer.closeIfUnpinned();
+    await attach(target.id);
+  } else {
+    await withAuthRetry(createAndAttach);
+  }
   subscribeSessionList(render);
 }
 
