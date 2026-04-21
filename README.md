@@ -1,12 +1,17 @@
 # web-shell
 
-Persistent browser terminal. Spawns PTY sessions on a Node.js backend and streams them over WebSocket to [xterm.js](https://xtermjs.org/). Sessions live server-side with a scrollback buffer, so refreshing the page — or reattaching from another device — resumes the same shell exactly where you left it.
+Persistent browser terminal. Spawns shells inside `tmux` sessions on a Node.js backend and streams them over WebSocket to [xterm.js](https://xtermjs.org/). Sessions live server-side with a scrollback buffer and survive page refreshes, device switches, _and_ server restarts — `tmux` keeps the shells running, and the server reattaches to them on boot.
 
 ## Stack
 
-- **Server**: Node.js + TypeScript, `node-pty`, `ws`
+- **Server**: Node.js + TypeScript, `node-pty`, `ws`, `tmux` (required on `$PATH`)
 - **Client**: TypeScript + SCSS + Vite, `xterm.js`
 - Strict TS everywhere (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, …)
+
+## Requirements
+
+- Node.js 20+
+- `tmux` installed and on `$PATH` — every session is a `tmux new-session -A -s webshell-<id>` under the hood.
 
 ## Layout
 
@@ -86,7 +91,9 @@ Server → client:
 
 ## Persistence model
 
-`SessionManager` owns the live `Session` instances. Each session keeps the last 256 KB of PTY output in a ring buffer. New WebSocket connections receive a `history` frame with the current buffer before live `output` streams, so the terminal repaints to the current state on refresh.
+Each `Session` is a `tmux` session named `webshell-<uuid>`, spawned under `node-pty` with a bundled `tmux.conf` (`server/tmux.conf`). `SessionManager` owns the live wrappers and keeps the last 256 KB of PTY output in a ring buffer per session. New WebSocket connections receive a sanitized `history` frame with the current buffer before live `output` streams, so the terminal repaints to the current state on refresh.
+
+Because the shells run inside `tmux`, they outlive the Node process. On startup, the server enumerates existing `webshell-*` tmux sessions, reattaches to each one, and seeds its scrollback from `tmux capture-pane`. Killing a session via the API runs `tmux kill-session`.
 
 The active session id is stored in `localStorage` so reloads reopen the same session automatically.
 
