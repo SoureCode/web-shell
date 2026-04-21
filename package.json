@@ -9,7 +9,6 @@
   },
   "files": [
     "server/dist",
-    "server/tmux.conf",
     "client/dist"
   ],
   "scripts": {

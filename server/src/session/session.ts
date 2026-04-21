@@ -1,19 +1,10 @@
-import { existsSync } from "node:fs";
 import { spawn, type IPty } from "node-pty";
 import { randomUUID } from "node:crypto";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { SCROLLBACK_BYTES } from "../config.js";
 import type { SessionInfo } from "../types/session.js";
 import { sanitizeForReplay } from "./replay.js";
 import { Scrollback } from "./scrollback.js";
-import * as tmux from "./tmux.js";
-
-const here = dirname(fileURLToPath(import.meta.url));
-// Dev (src/session/) and bundled (dist/) layouts put tmux.conf at different depths.
-const TMUX_CONF =
-  [resolve(here, "../../tmux.conf"), resolve(here, "../tmux.conf")].find(existsSync) ??
-  resolve(here, "../tmux.conf");
+import * as dtach from "./dtach.js";
 
 export type OutputListener = (chunk: string) => void;
 export type ExitListener = (code: number, signal?: number) => void;
@@ -26,7 +17,7 @@ export interface SessionOptions {
   readonly cwd: string;
   readonly cols: number;
   readonly rows: number;
-  readonly initialHistory?: string;
+  readonly reattach?: boolean;
 }
 
 export class Session {
@@ -41,7 +32,6 @@ export class Session {
   private readonly scrollback = new Scrollback(SCROLLBACK_BYTES);
   private readonly outputListeners = new Set<OutputListener>();
   private readonly exitListeners = new Set<ExitListener>();
-  private readonly tmuxName: string;
 
   constructor(opts: SessionOptions) {
     this.id = opts.id ?? randomUUID();
@@ -50,49 +40,44 @@ export class Session {
     this.shell = opts.shell;
     this._cols = opts.cols;
     this._rows = opts.rows;
-    this.tmuxName = tmux.sessionName(this.id);
 
-    if (opts.initialHistory) this.scrollback.append(opts.initialHistory);
+    const sock = dtach.socketPath(this.id);
+    const pidFile = dtach.pidPath(this.id);
+    const alreadyRunning = Boolean(opts.reattach) && dtach.sessionExists(this.id);
 
-    this.pty = spawn(
-      "tmux",
-      [
-        "-f",
-        TMUX_CONF,
-        "new-session",
-        "-A",
-        "-s",
-        this.tmuxName,
-        "-x",
-        String(opts.cols),
-        "-y",
-        String(opts.rows),
-        opts.shell,
-      ],
-      {
-        name: "xterm-256color",
-        cols: opts.cols,
-        rows: opts.rows,
-        cwd: opts.cwd,
-        env: process.env as Record<string, string>,
-      },
-    );
+    if (alreadyRunning) {
+      this.scrollback.append(dtach.readLogTail(this.id, SCROLLBACK_BYTES));
+    }
+
+    const args = alreadyRunning
+      ? ["-a", sock, "-r", "none", "-E"]
+      : ["-A", sock, "-r", "none", "-E", "sh", "-c", `echo $$ > ${JSON.stringify(pidFile)}; exec ${JSON.stringify(opts.shell)}`];
+
+    this.pty = spawn("dtach", args, {
+      name: "xterm-256color",
+      cols: opts.cols,
+      rows: opts.rows,
+      cwd: opts.cwd,
+      env: process.env as Record<string, string>,
+    });
 
     this.pty.onData((data) => {
-      this.scrollback.append(data);
-      for (const listener of this.outputListeners) listener(data);
+      const sanitized = data.replace(/\x1b\[\?2004[hl]/g, "");
+      this.scrollback.append(sanitized);
+      dtach.appendLog(this.id, sanitized, SCROLLBACK_BYTES);
+      for (const listener of this.outputListeners) listener(sanitized);
     });
 
     this.pty.onExit(({ exitCode, signal }) => {
       for (const listener of this.exitListeners) listener(exitCode, signal);
     });
 
-    void this.configureTmux();
-  }
-
-  private async configureTmux(): Promise<void> {
-    await tmux.sourceFile(TMUX_CONF);
-    await tmux.setTitle(this.tmuxName, this._title);
+    dtach.writeMeta({
+      id: this.id,
+      title: this._title,
+      shell: this.shell,
+      createdAt: this.createdAt,
+    });
   }
 
   get title(): string {
@@ -101,7 +86,12 @@ export class Session {
 
   setTitle(title: string): void {
     this._title = title;
-    void tmux.setTitle(this.tmuxName, title);
+    dtach.writeMeta({
+      id: this.id,
+      title,
+      shell: this.shell,
+      createdAt: this.createdAt,
+    });
   }
 
   get cols(): number {
@@ -145,12 +135,21 @@ export class Session {
   }
 
   kill(): void {
+    dtach.killShell(this.id);
     try {
       this.pty.kill();
     } catch {
       // already dead
     }
-    void tmux.kill(this.tmuxName);
+    dtach.cleanupFiles(this.id);
+  }
+
+  detach(): void {
+    try {
+      this.pty.kill();
+    } catch {
+      // already dead
+    }
   }
 
   info(): SessionInfo {

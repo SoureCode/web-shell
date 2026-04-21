@@ -2,25 +2,26 @@ import { DEFAULT_COLS, DEFAULT_ROWS } from "../config.js";
 import type { CreateSessionRequest, SessionInfo } from "../types/session.js";
 import { log } from "../utils/log.js";
 import { defaultCwd, defaultShell } from "../utils/shell.js";
+import * as dtach from "./dtach.js";
 import { Session } from "./session.js";
-import * as tmux from "./tmux.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, Session>();
 
   async rehydrate(): Promise<void> {
-    const existing = await tmux.listSessions();
-    for (const t of existing) {
-      const initialHistory = await tmux.capturePane(t.name);
+    const ids = dtach.listSessionIds();
+    for (const id of ids) {
+      const meta = dtach.readMeta(id);
+      if (!meta) continue;
       const session = new Session({
-        id: t.id,
-        createdAt: t.createdAt,
-        title: t.title,
-        shell: defaultShell(),
+        id: meta.id,
+        createdAt: meta.createdAt,
+        title: meta.title,
+        shell: meta.shell,
         cwd: defaultCwd(),
         cols: DEFAULT_COLS,
         rows: DEFAULT_ROWS,
-        initialHistory,
+        reattach: true,
       });
       this.sessions.set(session.id, session);
       log("session", "rehydrate", session.id, session.title);
@@ -59,6 +60,13 @@ export class SessionManager {
     const infos = [...this.sessions.values()].map((s) => s.info());
     log("session", "list", infos.length);
     return infos;
+  }
+
+  detachAll(): void {
+    for (const session of this.sessions.values()) {
+      session.detach();
+    }
+    this.sessions.clear();
   }
 
   destroy(id: string): boolean {

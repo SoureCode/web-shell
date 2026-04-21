@@ -46,6 +46,44 @@ export function createTerminal(container: HTMLElement): TerminalBundle {
   term.open(container);
   fit.fit();
 
+  const viewport = term.element;
+  if (viewport) {
+    viewport.addEventListener(
+      "wheel",
+      (event) => {
+        if (term.buffer.active.type === "alternate") {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      },
+      { capture: true },
+    );
+    viewport.addEventListener("paste", () => {
+      setTimeout(() => term.clearSelection(), 0);
+    });
+  }
+
+  term.onSelectionChange(() => {
+    const selection = term.getSelection();
+    if (!selection) return;
+    void navigator.clipboard?.writeText(selection);
+  });
+
+  term.attachCustomKeyEventHandler((event) => {
+    if (event.type !== "keydown") return true;
+    const mod = event.ctrlKey || event.metaKey;
+    if (mod && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "c" && term.hasSelection()) {
+      void navigator.clipboard?.writeText(term.getSelection());
+      term.clearSelection();
+      return false;
+    }
+    if (mod && !event.altKey && event.key.toLowerCase() === "v") {
+      term.clearSelection();
+      return false;
+    }
+    return true;
+  });
+
   requestAnimationFrame(() => {
     tryEnableGpuRenderer(term, fit);
   });

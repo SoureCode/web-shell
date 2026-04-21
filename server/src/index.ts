@@ -40,3 +40,19 @@ server.listen(PORT, HOST, () => {
   const authState = isAuthDisabled() ? "disabled (trust upstream)" : "enabled";
   console.log(`[web-shell] http://${HOST}:${PORT} · auth ${authState} · ${mode}`);
 });
+
+let shuttingDown = false;
+const shutdown = (signal: NodeJS.Signals) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[web-shell] ${signal} received, shutting down gracefully`);
+  server.closeAllConnections?.();
+  server.close();
+  setTimeout(() => {
+    manager.detachAll();
+    process.exit(0);
+  }, 500);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

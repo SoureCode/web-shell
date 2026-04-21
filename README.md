@@ -1,17 +1,17 @@
 # web-shell
 
-Persistent browser terminal. Spawns shells inside `tmux` sessions on a Node.js backend and streams them over WebSocket to [xterm.js](https://xtermjs.org/). Sessions live server-side with a scrollback buffer and survive page refreshes, device switches, _and_ server restarts — `tmux` keeps the shells running, and the server reattaches to them on boot.
+Persistent browser terminal. Spawns shells under `dtach` on a Node.js backend and streams them over WebSocket to [xterm.js](https://xtermjs.org/). Sessions live server-side with a scrollback buffer and survive page refreshes, device switches, _and_ server restarts — `dtach` keeps the shells running, and the server reattaches to them on boot.
 
 ## Stack
 
-- **Server**: Node.js + TypeScript, `node-pty`, `ws`, `tmux` (required on `$PATH`)
+- **Server**: Node.js + TypeScript, `node-pty`, `ws`, `dtach` (required on `$PATH`)
 - **Client**: TypeScript + SCSS + Vite, `xterm.js`
 - Strict TS everywhere (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, …)
 
 ## Requirements
 
 - Node.js 20+
-- `tmux` installed and on `$PATH` — every session is a `tmux new-session -A -s webshell-<id>` under the hood.
+- `dtach` installed and on `$PATH` — every session runs under `dtach -A <socket>` so the shell survives Node restarts.
 
 ## Layout
 
@@ -91,9 +91,9 @@ Server → client:
 
 ## Persistence model
 
-Each `Session` is a `tmux` session named `webshell-<uuid>`, spawned under `node-pty` with a bundled `tmux.conf` (`server/tmux.conf`). `SessionManager` owns the live wrappers and keeps the last 256 KB of PTY output in a ring buffer per session. New WebSocket connections receive a sanitized `history` frame with the current buffer before live `output` streams, so the terminal repaints to the current state on refresh.
+Each `Session` spawns a shell under `dtach -A <sock>` via `node-pty`. `SessionManager` owns the live wrappers and keeps a ring buffer of recent PTY output in memory, also append-only mirrored to a log file next to the socket. New WebSocket connections receive a sanitized `history` frame with the current buffer before live `output` streams, so the terminal repaints to the current state on refresh.
 
-Because the shells run inside `tmux`, they outlive the Node process. On startup, the server enumerates existing `webshell-*` tmux sessions, reattaches to each one, and seeds its scrollback from `tmux capture-pane`. Killing a session via the API runs `tmux kill-session`.
+Because the shells run under `dtach`, they outlive the Node process. Session state lives in `$WEB_SHELL_STATE_DIR` (default `~/.cache/web-shell/sessions/`): one `<id>.sock` (dtach), `<id>.json` (metadata), `<id>.log` (scrollback), `<id>.pid` (shell PID) per session. On startup, the server enumerates live sockets, reattaches to each, and seeds its scrollback from the log tail. Killing a session via the API `SIGHUP`s the shell and removes the session files. On graceful shutdown (SIGINT/SIGTERM) the server detaches cleanly so shells keep running.
 
 The active session id is stored in `localStorage` so reloads reopen the same session automatically.
 
@@ -106,6 +106,7 @@ The active session id is stored in `localStorage` so reloads reopen the same ses
 | `SHELL`           | env / `bash`                                            | Default shell for new sessions                                                                 |
 | `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173`           | Comma-separated origin allow-list. Requests with a disallowed `Origin` are rejected (HTTP 403 / WS 403). Required for the frontend you actually deploy. |
 | `AUTH_TOKEN`      | _unset_                                                 | Optional shared bearer token. When set, REST requires `Authorization: Bearer <token>` and WS requires `?token=<token>`. When unset, auth is disabled — only safe behind an authenticated upstream (Coder agent, SSO proxy, Tailscale, etc.). |
+| `WEB_SHELL_STATE_DIR` | `~/.cache/web-shell/sessions`                       | Directory holding per-session dtach sockets, metadata, logs, and pid files.                    |
 
 ## Security model
 
