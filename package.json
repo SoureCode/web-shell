@@ -13,7 +13,7 @@
     "client/dist"
   ],
   "scripts": {
-    "dev": "NODE_ENV=development node --import tsx --watch --watch-path=server/src server/src/index.ts",
+    "dev": "NODE_ENV=development PORT=${PORT:-8022} node --import tsx --watch --watch-path=server/src server/src/index.ts",
     "build:server": "vite build -c server/vite.config.ts",
     "build:client": "vite build -c client/vite.config.ts",
     "build": "npm run build:server && npm run build:client",
