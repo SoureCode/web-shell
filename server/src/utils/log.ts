@@ -1,4 +1,4 @@
-const filter = process.env["DEBUG"] ?? "*";
+const filter = process.env["DEBUG"] ?? (process.env["NODE_ENV"] === "development" ? "*" : "");
 const set = new Set(filter.split(",").map((s) => s.trim()).filter(Boolean));
 const all = set.has("*");
 
