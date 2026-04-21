@@ -51,7 +51,10 @@ export function createTerminal(container: HTMLElement): TerminalBundle {
     viewport.addEventListener(
       "wheel",
       (event) => {
-        if (term.buffer.active.type === "alternate") {
+        // Only swallow when xterm has no use for the event: alt screen active
+        // and the app hasn't enabled mouse tracking. Otherwise xterm translates
+        // the wheel into mouse escapes that pagers/editors need to scroll.
+        if (term.buffer.active.type === "alternate" && term.modes.mouseTrackingMode === "none") {
           event.preventDefault();
           event.stopPropagation();
         }
