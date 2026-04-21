@@ -62,6 +62,8 @@ export function attachTerminal(
   const stopObserve = observeResize(container, term, fit);
   const stopSearch = mountSearch(container, term, search);
 
+  term.focus();
+
   return {
     sessionId,
     fit: () => fit.fit(),

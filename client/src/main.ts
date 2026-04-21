@@ -40,7 +40,7 @@ async function refresh(): Promise<SessionInfo[]> {
   const sessions = await listSessions();
   renderSessionList(sessionListEl, sessions, active?.sessionId ?? null, {
     onSelect: (id) => {
-      drawer.closeIfMobile();
+      drawer.closeIfUnpinned();
       void attach(id);
     },
     onRename: async (id, title) => {
@@ -83,7 +83,7 @@ async function destroy(id: string): Promise<void> {
 
 async function createAndAttach(): Promise<void> {
   const info = await createSession();
-  drawer.closeIfMobile();
+  drawer.closeIfUnpinned();
   await attach(info.id);
 }
 

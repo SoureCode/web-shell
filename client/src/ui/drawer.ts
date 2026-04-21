@@ -7,6 +7,7 @@ export interface Drawer {
   close(): void;
   toggle(): void;
   closeIfMobile(): void;
+  closeIfUnpinned(): void;
   togglePin(): void;
 }
 
@@ -74,6 +75,9 @@ export function mountDrawer(el: DrawerElements): Drawer {
   const closeIfMobile = (): void => {
     if (media.matches) close();
   };
+  const closeIfUnpinned = (): void => {
+    if (el.root.dataset["sidebarPinned"] !== "true") close();
+  };
   const togglePin = (): void => setPinned(el.root.dataset["sidebarPinned"] !== "true");
 
   el.toggleBtn.addEventListener("click", toggle);
@@ -83,5 +87,5 @@ export function mountDrawer(el: DrawerElements): Drawer {
     if (e.key === "Escape" && media.matches) close();
   });
 
-  return { open, close, toggle, closeIfMobile, togglePin };
+  return { open, close, toggle, closeIfMobile, closeIfUnpinned, togglePin };
 }
