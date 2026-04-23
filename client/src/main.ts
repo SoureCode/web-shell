@@ -64,13 +64,18 @@ let active: AttachedTerminal | null = null;
 let knownSessions: SessionInfo[] = [];
 
 const BASE_DOC_TITLE = "web-shell";
+const titlePrefix =
+  document.querySelector<HTMLMetaElement>('meta[name="web-shell:title-prefix"]')?.content.trim() || null;
 
 function titleFor(id: string): string {
   return knownSessions.find((s) => s.id === id)?.title ?? id.slice(0, 8);
 }
 
 function setDocumentTitle(sessionTitle: string | null): void {
-  document.title = sessionTitle ? `${sessionTitle} · ${BASE_DOC_TITLE}` : BASE_DOC_TITLE;
+  const parts = [titlePrefix, sessionTitle, BASE_DOC_TITLE].filter(
+    (p): p is string => typeof p === "string" && p.length > 0,
+  );
+  document.title = parts.join(" | ");
 }
 
 function render(sessions: SessionInfo[]): void {
@@ -166,6 +171,7 @@ async function withAuthRetry<T>(op: () => Promise<T>): Promise<T> {
 }
 
 async function bootstrap(): Promise<void> {
+  setDocumentTitle(null);
   const sessions = await withAuthRetry(refresh);
   const saved = getActiveSessionId();
   const target = sessions.find((s) => s.id === saved) ?? sessions[0];

@@ -15,6 +15,8 @@ export const CLIENT_ROOT: string | null = existsSync(candidateRoot) ? candidateR
 
 export const AUTH_TOKEN: string | null = process.env["AUTH_TOKEN"]?.trim() || null;
 
+export const TITLE_PREFIX: string | null = process.env["WEB_SHELL_TITLE_PREFIX"]?.trim() || null;
+
 export const SCROLLBACK_BYTES = 1024 * 1024;
 
 export const DEFAULT_COLS = 80;
