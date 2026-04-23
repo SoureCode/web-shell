@@ -63,15 +63,24 @@ const setStatusText = (text: string): void => setStatus({ kind: "idle", text });
 let active: AttachedTerminal | null = null;
 let knownSessions: SessionInfo[] = [];
 
+const BASE_DOC_TITLE = "web-shell";
+
 function titleFor(id: string): string {
   return knownSessions.find((s) => s.id === id)?.title ?? id.slice(0, 8);
+}
+
+function setDocumentTitle(sessionTitle: string | null): void {
+  document.title = sessionTitle ? `${sessionTitle} · ${BASE_DOC_TITLE}` : BASE_DOC_TITLE;
 }
 
 function render(sessions: SessionInfo[]): void {
   knownSessions = sessions;
   if (active) {
     const found = sessions.find((s) => s.id === active?.sessionId);
-    if (found) active.setTitle(found.title);
+    if (found) {
+      active.setTitle(found.title);
+      setDocumentTitle(found.title);
+    }
   }
   renderSessionList(sessionListEl, sessions, active?.sessionId ?? null, {
     onSelect: (id) => {
@@ -108,6 +117,7 @@ async function attach(id: string): Promise<void> {
   keyboard.setSend((data) => active?.sendInput(data));
   overlay.setRetryHandler(() => active?.retry());
   setActiveSessionId(id);
+  setDocumentTitle(titleFor(id));
   await refresh();
 }
 
@@ -121,6 +131,7 @@ async function destroy(id: string): Promise<void> {
     termEl.innerHTML = "";
     clearActiveSessionId();
     setStatusText("no session");
+    setDocumentTitle(null);
   }
 }
 
