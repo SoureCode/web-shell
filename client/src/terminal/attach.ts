@@ -168,6 +168,7 @@ export function attachTerminal(
     log("attach", "retry requested", sessionId);
     clearRetryTimer();
     backoffMs = INITIAL_BACKOFF_MS;
+    attempt = 0;
     if (socket && socket.readyState === socket.OPEN) return;
     if (socket && socket.readyState === socket.CONNECTING) return;
     connect();

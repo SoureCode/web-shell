@@ -21,8 +21,16 @@ export function subscribeSessionList(onUpdate: (sessions: SessionInfo[]) => void
   let retryMs = 500;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
+  const clearRetryTimer = (): void => {
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+  };
+
   const connect = (): void => {
     if (closed) return;
+    clearRetryTimer();
     const url = buildUrl("api/sessions/events");
     log("socket", "open events", url);
     const ws = new WebSocket(url);
@@ -41,18 +49,38 @@ export function subscribeSessionList(onUpdate: (sessions: SessionInfo[]) => void
       }
     });
     ws.addEventListener("close", () => {
-      socket = null;
+      if (socket === ws) socket = null;
       if (closed) return;
       retryTimer = setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, 10_000);
     });
   };
 
+  const forceReconnect = (): void => {
+    if (closed) return;
+    if (socket && socket.readyState === WebSocket.OPEN) return;
+    if (socket && socket.readyState === WebSocket.CONNECTING) return;
+    log("socket", "events force reconnect");
+    retryMs = 500;
+    connect();
+  };
+
+  const onVisibilityChange = (): void => {
+    if (document.visibilityState !== "visible") return;
+    forceReconnect();
+  };
+  const onOnline = (): void => forceReconnect();
+
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("online", onOnline);
+
   connect();
 
   return () => {
     closed = true;
-    if (retryTimer) clearTimeout(retryTimer);
+    clearRetryTimer();
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("online", onOnline);
     socket?.close();
   };
 }
