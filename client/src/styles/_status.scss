@@ -4,4 +4,30 @@
   color: var(--fg-dim);
   background: var(--bg-elevated);
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  transition: background 120ms ease, color 120ms ease;
+
+  &[data-state="connected"] {
+    color: var(--success);
+  }
+
+  &[data-state="connecting"] {
+    color: var(--fg);
+  }
+
+  &[data-state="reconnecting"] {
+    color: #0a0e14;
+    background: var(--warning, #f0b429);
+    font-weight: 600;
+  }
+
+  &[data-state="error"] {
+    color: #fff;
+    background: var(--danger);
+    font-weight: 600;
+  }
+
+  &[data-state="exited"] {
+    color: var(--fg-dim);
+    background: var(--bg-elevated);
+  }
 }

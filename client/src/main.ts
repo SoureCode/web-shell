@@ -19,9 +19,10 @@ import {
 } from "./state/active-session.js";
 import { attachTerminal } from "./terminal/attach.js";
 import type { SessionInfo } from "./types/session.js";
-import type { AttachedTerminal } from "./types/terminal.js";
+import type { AttachedTerminal, Status, StatusListener } from "./types/terminal.js";
 import { promptForToken } from "./ui/auth-prompt.js";
 import { mountDrawer } from "./ui/drawer.js";
+import { mountTerminalOverlay } from "./ui/overlay.js";
 import { mountSortable, renderSessionList } from "./ui/sidebar.js";
 import { createStatusBar } from "./ui/status.js";
 import { mountVirtualKeyboard } from "./ui/virtual-keyboard.js";
@@ -37,14 +38,41 @@ const backdrop = requireElement<HTMLDivElement>("backdrop");
 const pinBtn = requireElement<HTMLButtonElement>("pin-sidebar");
 const kbEl = requireElement<HTMLElement>("keyboard");
 const kbToggle = requireElement<HTMLButtonElement>("kb-toggle");
+const overlayEl = requireElement<HTMLDivElement>("terminal-overlay");
+const overlayTitleEl = requireElement<HTMLDivElement>("terminal-overlay-title");
+const overlayMsgEl = requireElement<HTMLDivElement>("terminal-overlay-message");
+const overlayActionEl = requireElement<HTMLButtonElement>("terminal-overlay-action");
 
 const drawer = mountDrawer({ root: appEl, toggleBtn: menuToggle, backdrop, pinBtn });
 const keyboard = mountVirtualKeyboard(kbEl, kbToggle);
-const setStatus = createStatusBar(statusEl);
+const statusBar = createStatusBar(statusEl);
+const overlay = mountTerminalOverlay({
+  root: overlayEl,
+  title: overlayTitleEl,
+  message: overlayMsgEl,
+  action: overlayActionEl,
+});
+
+const setStatus: StatusListener = (status: Status): void => {
+  statusBar(status);
+  overlay.listener(status);
+};
+
+const setStatusText = (text: string): void => setStatus({ kind: "idle", text });
 
 let active: AttachedTerminal | null = null;
+let knownSessions: SessionInfo[] = [];
+
+function titleFor(id: string): string {
+  return knownSessions.find((s) => s.id === id)?.title ?? id.slice(0, 8);
+}
 
 function render(sessions: SessionInfo[]): void {
+  knownSessions = sessions;
+  if (active) {
+    const found = sessions.find((s) => s.id === active?.sessionId);
+    if (found) active.setTitle(found.title);
+  }
   renderSessionList(sessionListEl, sessions, active?.sessionId ?? null, {
     onSelect: (id) => {
       drawer.closeIfUnpinned();
@@ -76,8 +104,9 @@ async function attach(id: string): Promise<void> {
     log("main", "disposing previous", active.sessionId);
     active.dispose();
   }
-  active = attachTerminal(termEl, id, setStatus);
+  active = attachTerminal(termEl, id, titleFor(id), setStatus);
   keyboard.setSend((data) => active?.sendInput(data));
+  overlay.setRetryHandler(() => active?.retry());
   setActiveSessionId(id);
   await refresh();
 }
@@ -88,9 +117,10 @@ async function destroy(id: string): Promise<void> {
     active.dispose();
     active = null;
     keyboard.setSend(null);
+    overlay.setRetryHandler(null);
     termEl.innerHTML = "";
     clearActiveSessionId();
-    setStatus("no session");
+    setStatusText("no session");
   }
 }
 
@@ -106,7 +136,7 @@ async function tryCreateAndAttach(): Promise<void> {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     log("main", "create failed", message);
-    setStatus(message);
+    setStatus({ kind: "error", text: message });
   }
 }
 
@@ -118,7 +148,7 @@ async function withAuthRetry<T>(op: () => Promise<T>): Promise<T> {
       return await op();
     } catch (err: unknown) {
       if (!(err instanceof UnauthorizedError)) throw err;
-      setStatus("authentication required");
+      setStatus({ kind: "error", text: "authentication required" });
       if (!promptForToken("web-shell auth token")) throw err;
     }
   }

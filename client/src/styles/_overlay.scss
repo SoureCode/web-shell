@@ -1,0 +1,121 @@
+.terminal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(10, 14, 20, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  cursor: default;
+  animation: terminal-overlay-fade 140ms ease-out;
+}
+
+.terminal-overlay[hidden] {
+  display: none;
+}
+
+.terminal-overlay__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 14rem;
+  max-width: min(28rem, 100%);
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.terminal-overlay__title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.terminal-overlay__title::before {
+  content: "";
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 0 0 currentColor;
+  animation: terminal-overlay-pulse 1.4s ease-out infinite;
+}
+
+.terminal-overlay__message {
+  font-size: 0.85rem;
+  color: var(--fg-dim);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  word-break: break-word;
+}
+
+.terminal-overlay__action {
+  margin-top: 0.25rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.terminal-overlay__action:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.terminal-overlay__action[hidden] {
+  display: none;
+}
+
+.terminal-overlay[data-state="error"] .terminal-overlay__title {
+  color: var(--danger);
+}
+
+.terminal-overlay[data-state="error"] .terminal-overlay__title::before {
+  background: var(--danger);
+  color: var(--danger);
+}
+
+.terminal-overlay[data-state="reconnecting"] .terminal-overlay__title {
+  color: var(--warning);
+}
+
+.terminal-overlay[data-state="reconnecting"] .terminal-overlay__title::before {
+  color: var(--warning);
+}
+
+.terminal-overlay[data-state="exited"] .terminal-overlay__title {
+  color: var(--fg-dim);
+}
+
+.terminal-overlay[data-state="exited"] .terminal-overlay__title::before {
+  background: var(--fg-dim);
+  animation: none;
+  box-shadow: none;
+}
+
+@keyframes terminal-overlay-pulse {
+  0%   { box-shadow: 0 0 0 0 currentColor; }
+  70%  { box-shadow: 0 0 0 0.5rem rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+@keyframes terminal-overlay-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
