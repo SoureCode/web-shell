@@ -28,8 +28,15 @@
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
+  // Disable all default browser touch gestures inside the terminal
+  // (pull-to-refresh, overscroll rubber-band, double-tap zoom). Touch
+  // input is re-dispatched as synthetic wheel events by terminal/factory.ts
+  // so xterm's own wheel handling applies uniformly on desktop and mobile.
+  touch-action: none;
+  overscroll-behavior: contain;
 
   .xterm .xterm-viewport {
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }

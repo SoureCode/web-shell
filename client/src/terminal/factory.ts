@@ -78,6 +78,99 @@ export function createTerminal(container: HTMLElement): TerminalBundle {
     viewport.addEventListener("paste", () => {
       setTimeout(() => term.clearSelection(), 0);
     });
+
+    // Touch support. xterm's xterm-screen overlays xterm-viewport and eats
+    // touch events, so mobile browsers never see a native scroll gesture.
+    // Translate single-finger drags into synthetic wheel events dispatched
+    // at xterm's viewport. xterm's own wheel handling then applies — which
+    // means touch inherits exactly the same policy as the mouse wheel:
+    //   - normal buffer: scrolls the scrollback
+    //   - alt buffer + mouse tracking: emits protocol-correct mouse-wheel
+    //     escapes (apps with mouse support scroll natively)
+    //   - alt buffer without mouse tracking: swallowed by the capture
+    //     handler above, same as desktop
+    const xtermViewport = viewport.querySelector<HTMLElement>(".xterm-viewport");
+    let touchId: number | null = null;
+    let lastY = 0;
+    let pixelAccum = 0;
+
+    const findTouch = (list: TouchList, id: number): Touch | null => {
+      for (let i = 0; i < list.length; i++) {
+        const t = list[i];
+        if (t && t.identifier === id) return t;
+      }
+      return null;
+    };
+
+    // Row height via public surface: viewport's rendered height / term.rows.
+    // Falls back to a plausible pixel height before layout is ready.
+    const rowHeight = (): number => {
+      const h = xtermViewport?.clientHeight ?? 0;
+      const rows = term.rows || 1;
+      return h > 0 ? h / rows : 17;
+    };
+
+    const onTouchStart = (event: TouchEvent): void => {
+      const t = event.touches[0];
+      if (event.touches.length !== 1 || !t) {
+        touchId = null;
+        return;
+      }
+      touchId = t.identifier;
+      lastY = t.clientY;
+      pixelAccum = 0;
+    };
+
+    const onTouchMove = (event: TouchEvent): void => {
+      if (touchId === null || !xtermViewport) return;
+      const t = findTouch(event.touches, touchId);
+      if (!t) return;
+      const dy = lastY - t.clientY;
+      if (dy === 0) return;
+      lastY = t.clientY;
+
+      if (term.buffer.active.type === "normal") {
+        // Map continuous pixel delta onto xterm's row-based scroll API.
+        // Synthetic WheelEvents don't trigger the browser's default scroll of
+        // an overflow:auto element (gated on isTrusted), so we use xterm's
+        // public scrollLines() — the same entry point used by its own wheel
+        // handler after normalising pixels to lines.
+        pixelAccum += dy;
+        const rh = rowHeight();
+        const lines = Math.trunc(pixelAccum / rh);
+        if (lines !== 0) {
+          pixelAccum -= lines * rh;
+          term.scrollLines(lines);
+        }
+      } else {
+        // Alt buffer: no scrollback to slide. Dispatch a synthetic wheel so
+        // xterm's JS handler runs — it emits protocol-correct mouse-wheel
+        // escapes when the app has opted into mouse tracking, and is
+        // swallowed by the capture handler above otherwise (matching the
+        // desktop wheel policy).
+        xtermViewport.dispatchEvent(
+          new WheelEvent("wheel", {
+            deltaY: dy,
+            deltaMode: WheelEvent.DOM_DELTA_PIXEL,
+            clientX: t.clientX,
+            clientY: t.clientY,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+    };
+
+    const onTouchEnd = (event: TouchEvent): void => {
+      if (touchId === null) return;
+      if (findTouch(event.touches, touchId)) return;
+      touchId = null;
+    };
+
+    viewport.addEventListener("touchstart", onTouchStart, { passive: true });
+    viewport.addEventListener("touchmove", onTouchMove, { passive: true });
+    viewport.addEventListener("touchend", onTouchEnd, { passive: true });
+    viewport.addEventListener("touchcancel", onTouchEnd, { passive: true });
   }
 
   term.onSelectionChange(() => {
