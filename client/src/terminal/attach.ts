@@ -15,11 +15,9 @@ const MAX_QUEUED_INPUT_BYTES = 64 * 1024;
 export function attachTerminal(
   container: HTMLElement,
   sessionId: string,
-  title: string,
   onStatus: StatusListener,
 ): AttachedTerminal {
   const { term, fit, search } = createTerminal(container);
-  let currentTitle = title;
 
   let socket: WebSocket | null = null;
   let disposed = false;
@@ -80,7 +78,7 @@ export function attachTerminal(
     if (isReconnect) {
       setStatus({
         kind: "reconnecting",
-        text: attempt > 1 ? `reconnecting · attempt ${attempt}` : "reconnecting…",
+        text: attempt > 1 ? `reconnecting | attempt ${attempt}` : "reconnecting…",
         attempt,
       });
     } else {
@@ -105,7 +103,7 @@ export function attachTerminal(
         term.reset();
       }
       everConnected = true;
-      setStatus({ kind: "connected", text: `connected · ${currentTitle}` });
+      setStatus({ kind: "connected", text: "connected" });
       sendResize();
       drainQueue(ws);
     });
@@ -121,7 +119,7 @@ export function attachTerminal(
       } else {
         log("attach", "recv exit", sessionId, "code=", msg.code);
         exited = true;
-        setStatus({ kind: "exited", text: `exited · code ${msg.code}` });
+        setStatus({ kind: "exited", text: `exited | code ${msg.code}` });
       }
     });
 
@@ -153,8 +151,8 @@ export function attachTerminal(
     setStatus({
       kind: "reconnecting",
       text: attempt === 1
-        ? "disconnected · reconnecting…"
-        : `reconnecting in ${Math.round(delay / 100) / 10}s · attempt ${attempt}`,
+        ? "disconnected | reconnecting…"
+        : `reconnecting in ${Math.round(delay / 100) / 10}s | attempt ${attempt}`,
       attempt,
     });
     retryTimer = setTimeout(() => {
@@ -196,13 +194,6 @@ export function attachTerminal(
     sessionId,
     fit: () => fit.fit(),
     sendInput: (data) => send({ type: "input", data }),
-    setTitle: (next) => {
-      if (next === currentTitle) return;
-      currentTitle = next;
-      if (socket && socket.readyState === socket.OPEN) {
-        setStatus({ kind: "connected", text: `connected · ${currentTitle}` });
-      }
-    },
     retry,
     dispose: () => {
       log("attach", "dispose", sessionId);

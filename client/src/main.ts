@@ -43,6 +43,10 @@ const overlayTitleEl = requireElement<HTMLDivElement>("terminal-overlay-title");
 const overlayMsgEl = requireElement<HTMLDivElement>("terminal-overlay-message");
 const overlayActionEl = requireElement<HTMLButtonElement>("terminal-overlay-action");
 
+const BASE_DOC_TITLE = "web-shell";
+const titlePrefix =
+  document.querySelector<HTMLMetaElement>('meta[name="web-shell:title-prefix"]')?.content.trim() || null;
+
 const drawer = mountDrawer({ root: appEl, toggleBtn: menuToggle, backdrop, pinBtn });
 const keyboard = mountVirtualKeyboard(kbEl, kbToggle);
 const statusBar = createStatusBar(statusEl);
@@ -53,40 +57,51 @@ const overlay = mountTerminalOverlay({
   action: overlayActionEl,
 });
 
+let active: AttachedTerminal | null = null;
+let knownSessions: SessionInfo[] = [];
+let currentSessionTitle: string | null = null;
+let currentStatus: Status = { kind: "idle", text: "no session" };
+
+function composeBar(): string {
+  return [titlePrefix, currentSessionTitle, currentStatus.text, BASE_DOC_TITLE]
+    .filter((p): p is string => typeof p === "string" && p.length > 0)
+    .join(" | ");
+}
+
+function renderBar(): void {
+  const text = composeBar();
+  document.title = text;
+  statusBar.set(currentStatus.kind, text);
+}
+
 const setStatus: StatusListener = (status: Status): void => {
-  statusBar(status);
+  currentStatus = status;
+  renderBar();
   overlay.listener(status);
 };
 
-const setStatusText = (text: string): void => setStatus({ kind: "idle", text });
+function setSessionTitle(title: string | null): void {
+  currentSessionTitle = title;
+  renderBar();
+}
 
-let active: AttachedTerminal | null = null;
-let knownSessions: SessionInfo[] = [];
-
-const BASE_DOC_TITLE = "web-shell";
-const titlePrefix =
-  document.querySelector<HTMLMetaElement>('meta[name="web-shell:title-prefix"]')?.content.trim() || null;
+function syncActiveSessionMeta(): void {
+  const activeId = active?.sessionId;
+  const info = activeId ? knownSessions.find((s) => s.id === activeId) : undefined;
+  statusBar.setSessionStartedAt(info ? info.createdAt : null);
+}
 
 function titleFor(id: string): string {
   return knownSessions.find((s) => s.id === id)?.title ?? id.slice(0, 8);
-}
-
-function setDocumentTitle(sessionTitle: string | null): void {
-  const parts = [titlePrefix, sessionTitle, BASE_DOC_TITLE].filter(
-    (p): p is string => typeof p === "string" && p.length > 0,
-  );
-  document.title = parts.join(" | ");
 }
 
 function render(sessions: SessionInfo[]): void {
   knownSessions = sessions;
   if (active) {
     const found = sessions.find((s) => s.id === active?.sessionId);
-    if (found) {
-      active.setTitle(found.title);
-      setDocumentTitle(found.title);
-    }
+    if (found) setSessionTitle(found.title);
   }
+  syncActiveSessionMeta();
   renderSessionList(sessionListEl, sessions, active?.sessionId ?? null, {
     onSelect: (id) => {
       drawer.closeIfUnpinned();
@@ -118,11 +133,12 @@ async function attach(id: string): Promise<void> {
     log("main", "disposing previous", active.sessionId);
     active.dispose();
   }
-  active = attachTerminal(termEl, id, titleFor(id), setStatus);
+  active = attachTerminal(termEl, id, setStatus);
   keyboard.setSend((data) => active?.sendInput(data));
   overlay.setRetryHandler(() => active?.retry());
   setActiveSessionId(id);
-  setDocumentTitle(titleFor(id));
+  setSessionTitle(titleFor(id));
+  syncActiveSessionMeta();
   await refresh();
 }
 
@@ -135,8 +151,9 @@ async function destroy(id: string): Promise<void> {
     overlay.setRetryHandler(null);
     termEl.innerHTML = "";
     clearActiveSessionId();
-    setStatusText("no session");
-    setDocumentTitle(null);
+    setSessionTitle(null);
+    syncActiveSessionMeta();
+    setStatus({ kind: "idle", text: "no session" });
   }
 }
 
@@ -171,7 +188,7 @@ async function withAuthRetry<T>(op: () => Promise<T>): Promise<T> {
 }
 
 async function bootstrap(): Promise<void> {
-  setDocumentTitle(null);
+  renderBar();
   const sessions = await withAuthRetry(refresh);
   const saved = getActiveSessionId();
   const target = sessions.find((s) => s.id === saved) ?? sessions[0];
