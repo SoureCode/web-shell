@@ -30,6 +30,7 @@ export interface SessionMeta {
   readonly id: string;
   readonly title: string;
   readonly shell: string;
+  readonly cwd: string;
   readonly createdAt: number;
   readonly order?: number;
 }

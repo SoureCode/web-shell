@@ -3,6 +3,7 @@ import type { SessionManager } from "../session/manager.js";
 import type { RequestFallback } from "../types/fallback.js";
 import type { CreateSessionRequest } from "../types/session.js";
 import { extractBearer, extractQueryToken, isTokenValid } from "../utils/auth.js";
+import { resolveRequestedCwd } from "../utils/cwd.js";
 import { readJson, sendJson } from "../utils/json.js";
 import { log } from "../utils/log.js";
 import { isRequestOriginAcceptable } from "../utils/origin.js";
@@ -90,7 +91,12 @@ export function createHttpHandler(manager: SessionManager, fallback: RequestFall
         return;
       }
       const body = await readJson<CreateSessionRequest>(req).catch(() => ({}) as CreateSessionRequest);
-      const session = manager.create(body);
+      const resolved = resolveRequestedCwd(body.cwd);
+      if (!resolved.ok) {
+        sendJson(res, 400, { error: resolved.error });
+        return;
+      }
+      const session = manager.create({ ...body, cwd: resolved.cwd });
       sendJson(res, 201, session.info());
       return;
     }

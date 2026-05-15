@@ -157,8 +157,14 @@ async function destroy(id: string): Promise<void> {
   }
 }
 
+function requestedCwd(): string | undefined {
+  const value = new URLSearchParams(location.search).get("cwd");
+  return value ?? undefined;
+}
+
 async function createAndAttach(): Promise<void> {
-  const info = await createSession();
+  const cwd = requestedCwd();
+  const info = await createSession(cwd ? { cwd } : {});
   drawer.closeIfUnpinned();
   await attach(info.id);
 }

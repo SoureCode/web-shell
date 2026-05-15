@@ -107,6 +107,29 @@ The active session id is stored in `localStorage` so reloads reopen the same ses
 | `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173`           | Comma-separated origin allow-list. Requests with a disallowed `Origin` are rejected (HTTP 403 / WS 403). Required for the frontend you actually deploy. |
 | `AUTH_TOKEN`      | _unset_                                                 | Optional shared bearer token. When set, REST requires `Authorization: Bearer <token>` and WS requires `?token=<token>`. When unset, auth is disabled — only safe behind an authenticated upstream (Coder agent, SSO proxy, Tailscale, etc.). |
 | `WEB_SHELL_STATE_DIR` | `~/.cache/web-shell/sessions`                       | Directory holding per-session dtach sockets, metadata, logs, and pid files.                    |
+| `WEB_SHELL_CWD`   | `$HOME`                                                 | Default working directory for new sessions when the client does not request one.               |
+| `WEB_SHELL_CWD_ALLOW` | _unset_                                             | Optional comma-separated allow-list of directory prefixes. When set, `?cwd=` requests outside the listed roots are rejected. Off by default.        |
+
+## Per-session working directory
+
+Each new session can pick its own starting directory via the `?cwd=` query parameter on the page URL:
+
+```
+http://localhost:4000/?cwd=/tmp
+```
+
+The frontend reads `?cwd=` and forwards it to the backend when it creates a session. Existing sessions keep their original cwd — the parameter only applies when a fresh session is spawned.
+
+The server validates every requested cwd:
+
+- Must be an absolute path.
+- Must exist and be a directory.
+- Must be readable and executable by the server's user.
+- If `WEB_SHELL_CWD_ALLOW` is set, the resolved path must sit under one of the listed prefixes (e.g. `WEB_SHELL_CWD_ALLOW=/home/coder,/tmp`). Match is by directory boundary, so `/home/coder` admits `/home/coder/projects` but not `/home/coder-evil`.
+
+Invalid requests fail with HTTP 400 and the error is surfaced in the terminal pane — there is no silent fallback, so misconfigurations are visible. When the parameter is omitted, sessions start in `WEB_SHELL_CWD` (or `$HOME` if unset).
+
+`?cwd=` is plain routing input — auth is unchanged and still relies on `AUTH_TOKEN` or upstream proxy auth.
 
 ## Security model
 

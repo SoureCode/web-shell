@@ -32,7 +32,7 @@ export class SessionManager {
         createdAt: meta.createdAt,
         title: meta.title,
         shell: meta.shell,
-        cwd: defaultCwd(),
+        cwd: meta.cwd ?? defaultCwd(),
         cols: DEFAULT_COLS,
         rows: DEFAULT_ROWS,
         ...(meta.order !== undefined ? { order: meta.order } : {}),

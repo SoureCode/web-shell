@@ -25,6 +25,7 @@ export class Session {
   readonly id: string;
   readonly createdAt: number;
   readonly shell: string;
+  readonly cwd: string;
 
   private _title: string;
   private _cols: number;
@@ -41,6 +42,7 @@ export class Session {
     this.createdAt = opts.createdAt ?? Date.now();
     this._title = opts.title;
     this.shell = opts.shell;
+    this.cwd = opts.cwd;
     this._cols = opts.cols;
     this._rows = opts.rows;
     this._order = opts.order ?? this.createdAt;
@@ -84,6 +86,7 @@ export class Session {
       id: this.id,
       title: this._title,
       shell: this.shell,
+      cwd: this.cwd,
       createdAt: this.createdAt,
       order: this._order,
     });
@@ -225,6 +228,7 @@ export class Session {
       id: this.id,
       title: this._title,
       shell: this.shell,
+      cwd: this.cwd,
       cols: this._cols,
       rows: this._rows,
       createdAt: this.createdAt,
